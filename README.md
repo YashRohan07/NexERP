@@ -238,24 +238,3 @@ http://127.0.0.1:8000
 
 ---
 
-## Future Upgrade Ideas
-
-Future versions may include:
-
-- inventory_movements
-- stock_batches
-<<<<<<< HEAD
-- warehouse support
-- batch tracking
-
-These are not included in the current MVP.
-
-
-=======
-- warehouse management
-- sales & purchase modules
-- accounting module
-- POS system
-- advanced reports
-- multi-warehouse support
->>>>>>> a6b08ce (Build database foundation with products, inventories, relationships, and seeders)
