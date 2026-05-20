@@ -1,0 +1,53 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.backup
+.env.production
+
+# IDE / Editors
+.vscode/
+.idea/
+.fleet/
+.zed/
+
+# PHP / Laravel
+/vendor
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/logs/*
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/pail
+/bootstrap/cache/*.php
+
+# Composer
+composer.lock
+auth.json
+
+# Node
+/node_modules
+
+# Testing
+.phpunit.result.cache
+.phpunit.cache
+
+# Laravel tools
+.phpactor.json
+/.nova
+
+# Laragon / Homestead
+Homestead.json
+Homestead.yaml
+
+# Build / Cache
+/dist
+.cache/
+
+# Logs
+*.log
