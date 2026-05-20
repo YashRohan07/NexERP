@@ -10,8 +10,6 @@ Base URL:
 http://localhost:8000/api
 ```
 
-````
-
 ---
 
 # Auth
@@ -94,4 +92,4 @@ low_stock_count = count(quantity <= low_stock_threshold)
 - Product and inventory create operations will use DB transaction
 - This file is planning only for Phase 0
 
-````
+
