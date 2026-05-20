@@ -2,8 +2,6 @@
 
 NexERP is a modular ERP and business management system built with Laravel REST API and React SPA.
 
-The goal of this project is to build a clean, realistic, and beginner-friendly ERP MVP for learning, office submission, and portfolio use.
-
 ---
 
 ## Tech Stack
@@ -32,7 +30,7 @@ The goal of this project is to build a clean, realistic, and beginner-friendly E
 
 ## Project Architecture
 
-NexERP will use:
+NexERP uses:
 
 - Modular Monolith architecture
 - Laravel MVC inside modules
@@ -43,7 +41,7 @@ NexERP will use:
 
 ## MVP Modules
 
-The MVP will include:
+The MVP includes:
 
 - Auth
 - Product
@@ -90,40 +88,174 @@ The MVP will include:
 
 ---
 
-## Database Plan
+## Database Design
 
-Main tables:
+### Main Tables
 
-- users
-- products
-- inventories
+#### users
 
-Relationship:
+- id
+- name
+- email
+- password
+- role
+
+#### products
+
+- id
+- sku
+- name
+- size
+- color
+- deleted_at
+
+#### inventories
+
+- id
+- product_id
+- quantity
+- purchase_price
+- purchase_date
+- low_stock_threshold
+
+---
+
+### Relationships
 
 ```txt
-products 1 : 1 inventories
+Product hasOne Inventory
+Inventory belongsTo Product
+```
+
+For the MVP:
+
+```txt
+1 Product = 1 Inventory Record
 ```
 
 ---
 
-## User Roles
+### Database Features
 
-| Role   | Access      |
-| ------ | ----------- |
-| admin  | Full access |
-| member | View only   |
+- Foreign key constraints
+- Indexed columns
+- Soft deletes for products
+- Role-based users
+- Laravel Eloquent relationships
 
 ---
 
-## Future Upgrade Note
+## Backend Module Structure
 
-Later, inventory can be extended using:
+```txt
+app/Modules/
+├── Auth
+├── Product
+├── Inventory
+├── Dashboard
+└── Report
+```
+
+---
+
+## API Health Check
+
+Endpoint:
+
+```txt
+GET /api/health
+```
+
+Example response:
+
+```json
+{
+  "success": true,
+  "message": "NexERP API is running"
+}
+```
+
+---
+
+## Seeded Demo Users
+
+| Role   | Email                                         | Password |
+| ------ | --------------------------------------------- | -------- |
+| admin  | [admin@nexerp.com](mailto:admin@nexerp.com)   | password |
+| member | [member@nexerp.com](mailto:member@nexerp.com) | password |
+
+---
+
+## Local Setup
+
+### Backend Setup
+
+```bash
+git clone https://github.com/YashRohan07/NexERP.git
+
+cd nexerp/nexerp-backend
+
+composer install
+
+cp .env.example .env
+
+php artisan key:generate
+```
+
+### Database Setup
+
+Create database:
+
+```txt
+nexerp_db
+```
+
+Then update `.env` database credentials.
+
+Run migrations:
+
+```bash
+php artisan migrate
+```
+
+Run seeders:
+
+```bash
+php artisan db:seed
+```
+
+Start server:
+
+```bash
+php artisan serve
+```
+
+Backend URL:
+
+```txt
+http://127.0.0.1:8000
+```
+
+---
+
+## Future Upgrade Ideas
+
+Future versions may include:
 
 - inventory_movements
 - stock_batches
+<<<<<<< HEAD
 - warehouse support
 - batch tracking
 
 These are not included in the current MVP.
 
 
+=======
+- warehouse management
+- sales & purchase modules
+- accounting module
+- POS system
+- advanced reports
+- multi-warehouse support
+>>>>>>> a6b08ce (Build database foundation with products, inventories, relationships, and seeders)

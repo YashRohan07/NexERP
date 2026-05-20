@@ -61,6 +61,8 @@ The products table will store product basic information.
 | updated_at | Updated time       |
 | deleted_at | Soft delete time   |
 
+Soft delete is enabled for products using the `deleted_at` column.
+
 ---
 
 ## inventories Table
@@ -80,14 +82,14 @@ The inventories table will store current stock information for each product.
 
 ---
 
-## Eloquent Relationships
-
-Planned Laravel relationships:
+## Laravel Relationships
 
 ```txt
 Product hasOne Inventory
 Inventory belongsTo Product
 ```
+
+The `inventories.product_id` column uses a foreign key constraint linked to `products.id`.
 
 ---
 
@@ -135,4 +137,7 @@ Later, inventory can be extended with:
 - batch tracking
 
 These are not part of the current MVP.
+<<<<<<< HEAD
 
+=======
+>>>>>>> a6b08ce (Build database foundation with products, inventories, relationships, and seeders)

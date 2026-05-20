@@ -1,0 +1,46 @@
+# Environment files
+.env
+.env.backup
+.env.production
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE & editor files
+/.idea
+/.vscode
+/.fleet
+/.zed
+/.nova
+
+# PHP / Laravel cache files
+.phpactor.json
+.phpunit.result.cache
+/.phpunit.cache
+
+# Authentication
+auth.json
+
+# Dependencies
+nexerp-backend/vendor
+nexerp-frontend/node_modules
+
+# Build files
+nexerp-backend/public/build
+nexerp-backend/public/hot
+nexerp-backend/public/storage
+
+# Storage keys
+nexerp-backend/storage/*.key
+nexerp-backend/storage/pail
+
+# Laragon / local database
+nexerp-backend/database/database.sqlite
+
+# Homestead
+Homestead.json
+Homestead.yaml

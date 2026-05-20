@@ -2,9 +2,10 @@
 
 ## Overview
 
-NexERP is planned as a Laravel REST API backend with a React SPA frontend.
+NexERP is built as a Laravel REST API backend with a React SPA frontend.
 
-The system will follow a Modular Monolith architecture. The application will stay as one Laravel project, but features will be organized by modules.
+The system follows a Modular Monolith architecture. The application stays as one Laravel project,
+but features are organized by modules.
 
 This approach keeps the project simple, maintainable, and beginner-friendly.
 
@@ -12,7 +13,7 @@ This approach keeps the project simple, maintainable, and beginner-friendly.
 
 ## Main Architecture Decision
 
-NexERP will use:
+NexERP uses:
 
 - Modular Monolith architecture
 - Laravel MVC inside modules
@@ -36,9 +37,9 @@ This architecture is used because:
 
 ## Backend Architecture
 
-The backend will be built with Laravel 12.x.
+The backend is built with Laravel 12.x.
 
-Planned backend module structure:
+Backend module structure:
 
 ```txt
 app/
@@ -77,12 +78,12 @@ app/
 
 ## Backend Module Rules
 
-Each module will keep related files together.
+Each module keeps related files together.
 
-- Controllers will handle requests
-- Requests will handle validation
-- Services will contain business logic
-- Routes will define API endpoints
+- Controllers handle requests
+- Requests handle validation
+- Services contain business logic
+- Routes define API endpoints
 
 Controllers should stay thin.
 
@@ -129,7 +130,7 @@ React Page
 
 ## Authentication Flow
 
-Authentication will use Laravel Sanctum.
+Authentication uses Laravel Sanctum.
 
 Basic flow:
 
@@ -145,7 +146,7 @@ Login Request
 
 ## User Roles
 
-The MVP will use two roles:
+The MVP uses two roles:
 
 | Role   | Access           |
 | ------ | ---------------- |
@@ -168,11 +169,15 @@ Relationship:
 products 1 : 1 inventories
 ```
 
+Products use soft deletes through the `deleted_at` column.
+
+The inventories table uses a foreign key relationship with products.
+
 ---
 
 ## MVP Modules
 
-The MVP will include:
+The MVP includes:
 
 - Auth
 - Product
@@ -204,7 +209,7 @@ The MVP will not include:
 
 ## Development Principles
 
-The project will follow:
+The project follows:
 
 - OOP
 - SOLID
