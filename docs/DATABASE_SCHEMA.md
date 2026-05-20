@@ -135,9 +135,3 @@ Later, inventory can be extended with:
 - purchase records
 - sales records
 - batch tracking
-
-These are not part of the current MVP.
-<<<<<<< HEAD
-
-=======
->>>>>>> a6b08ce (Build database foundation with products, inventories, relationships, and seeders)

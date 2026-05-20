@@ -10,8 +10,6 @@ Base URL:
 http://127.0.0.1:8000/api
 ```
 
-<<<<<<< HEAD
-=======
 ---
 
 # System
@@ -20,7 +18,6 @@ http://127.0.0.1:8000/api
 | ------ | ----------- | ---------------- |
 | GET    | /api/health | API health check |
 
->>>>>>> a6b08ce (Build database foundation with products, inventories, relationships, and seeders)
 ---
 
 # Auth
@@ -101,10 +98,3 @@ low_stock_count = count(quantity <= low_stock_threshold)
 - API responses will return JSON
 - Products and inventories use a 1:1 relationship
 - Product and inventory create operations will use DB transaction
-<<<<<<< HEAD
-- This file is planning only for Phase 0
-
-
-=======
-- This file is planning only for the MVP
->>>>>>> a6b08ce (Build database foundation with products, inventories, relationships, and seeders)
