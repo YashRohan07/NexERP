@@ -103,7 +103,6 @@ Relationship:
 ```txt
 products 1 : 1 inventories
 ```
-````
 
 ---
 
