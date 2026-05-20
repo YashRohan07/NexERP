@@ -24,8 +24,6 @@ The MVP will use these tables:
 products 1 : 1 inventories
 ```
 
-````
-
 One product will have one inventory record.
 
 One inventory record will belong to one product.
@@ -137,4 +135,4 @@ Later, inventory can be extended with:
 - batch tracking
 
 These are not part of the current MVP.
-````
+
