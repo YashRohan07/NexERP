@@ -1,4 +1,3 @@
-````md
 # NexERP
 
 NexERP is a modular ERP and business management system built with Laravel REST API and React SPA.
@@ -128,4 +127,4 @@ Later, inventory can be extended using:
 
 These are not included in the current MVP.
 
----
+
