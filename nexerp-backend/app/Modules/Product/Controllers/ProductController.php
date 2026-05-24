@@ -3,33 +3,73 @@
 namespace App\Modules\Product\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Product\Requests\StoreProductRequest;
+use App\Modules\Product\Requests\UpdateProductRequest;
+use App\Modules\Product\Services\ProductService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    public function index(): JsonResponse
-    {
-        return ApiResponse::success('Product list endpoint is ready');
+    public function __construct(
+        private readonly ProductService $productService
+    ) {
     }
 
-    public function store(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        return ApiResponse::success('Product create endpoint is ready');
+        $products = $this->productService->getProducts($request->only([
+            'search',
+            'size',
+            'color',
+            'per_page',
+        ]));
+
+        return ApiResponse::success('Products fetched successfully', [
+            'products' => $products->getCollection()
+                ->map(fn ($product) => $this->productService->formatProduct($product))
+                ->values(),
+            'pagination' => [
+                'current_page' => $products->currentPage(),
+                'per_page' => $products->perPage(),
+                'total' => $products->total(),
+                'last_page' => $products->lastPage(),
+            ],
+        ]);
+    }
+
+    public function store(StoreProductRequest $request): JsonResponse
+    {
+        $product = $this->productService->createProduct($request->validated());
+
+        return ApiResponse::success('Product created successfully', [
+            'product' => $this->productService->formatProduct($product),
+        ], 201);
     }
 
     public function show(int $product): JsonResponse
     {
-        return ApiResponse::success('Product details endpoint is ready');
+        $product = $this->productService->getProduct($product);
+
+        return ApiResponse::success('Product fetched successfully', [
+            'product' => $this->productService->formatProduct($product),
+        ]);
     }
 
-    public function update(int $product): JsonResponse
+    public function update(UpdateProductRequest $request, int $product): JsonResponse
     {
-        return ApiResponse::success('Product update endpoint is ready');
+        $product = $this->productService->updateProduct($product, $request->validated());
+
+        return ApiResponse::success('Product updated successfully', [
+            'product' => $this->productService->formatProduct($product),
+        ]);
     }
 
     public function destroy(int $product): JsonResponse
     {
-        return ApiResponse::success('Product delete endpoint is ready');
+        $this->productService->deleteProduct($product);
+
+        return ApiResponse::success('Product deleted successfully');
     }
 }
