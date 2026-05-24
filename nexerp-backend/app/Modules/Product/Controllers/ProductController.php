@@ -19,15 +19,16 @@ class ProductController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $products = $this->productService->getProducts($request->only([
-            'search',
-            'size',
-            'color',
-            'per_page',
-        ]));
+        // Product list filters should only come from query params, not request body.
+        $products = $this->productService->getProducts([
+            'search' => $request->query('search'),
+            'size' => $request->query('size'),
+            'color' => $request->query('color'),
+            'per_page' => $request->query('per_page'),
+        ]);
 
         return ApiResponse::success('Products fetched successfully', [
-            'products' => $products->getCollection()
+            'products' => collect($products->items())
                 ->map(fn ($product) => $this->productService->formatProduct($product))
                 ->values(),
             'pagination' => [
