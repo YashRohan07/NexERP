@@ -24,6 +24,15 @@ class AuthService
         ];
     }
 
+    public function logout(User $user): void
+    {
+        $currentToken = $user->currentAccessToken();
+
+        if ($currentToken) {
+            $currentToken->delete();
+        }
+    }
+
     public function formatUser(User $user): array
     {
         return [

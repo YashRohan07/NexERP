@@ -33,4 +33,11 @@ class AuthController extends Controller
             'user' => $this->authService->formatUser($request->user()),
         ]);
     }
+
+    public function logout(Request $request): JsonResponse
+    {
+        $this->authService->logout($request->user());
+
+        return ApiResponse::success('Logout successful');
+    }
 }
