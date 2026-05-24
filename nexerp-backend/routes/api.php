@@ -12,3 +12,4 @@ Route::get('/health', function () {
 
 require __DIR__.'/../app/Modules/Auth/Routes/api.php';
 require __DIR__.'/../app/Modules/Product/Routes/api.php';
+require __DIR__.'/../app/Modules/Inventory/Routes/api.php';
