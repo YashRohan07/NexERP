@@ -9,3 +9,5 @@ Route::get('/health', function () {
         'environment' => app()->environment(),
     ]);
 });
+
+require __DIR__.'/../app/Modules/Auth/Routes/api.php';
