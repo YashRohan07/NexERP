@@ -5,6 +5,8 @@ namespace App\Modules\Inventory\Services;
 use App\Models\Product;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class InventoryService
 {
@@ -82,6 +84,49 @@ class InventoryService
         }
 
         return $query->paginate($perPage);
+    }
+
+    public function adjustStock(Product $product, array $data): array
+    {
+        return DB::transaction(function () use ($product, $data): array {
+            $product->load('inventory');
+
+            if (! $product->inventory) {
+                throw new InvalidArgumentException('Inventory record not found for this product.');
+            }
+
+            $inventory = $product->inventory;
+            $previousQuantity = $inventory->quantity;
+            $adjustmentType = $data['adjustment_type'];
+            $quantity = (int) $data['quantity'];
+
+            // Calculate new quantity based on adjustment type.
+            if ($adjustmentType === 'increase') {
+                $newQuantity = $previousQuantity + $quantity;
+            } elseif ($adjustmentType === 'decrease') {
+                $newQuantity = $previousQuantity - $quantity;
+            } else {
+                $newQuantity = $quantity;
+            }
+
+            if ($newQuantity < 0) {
+                throw new InvalidArgumentException('Quantity cannot become negative.');
+            }
+
+            // Adjust Stock updates only quantity.
+            $inventory->update([
+                'quantity' => $newQuantity,
+            ]);
+
+            return [
+                'product_id' => $product->id,
+                'sku' => $product->sku,
+                'name' => $product->name,
+                'previous_quantity' => $previousQuantity,
+                'new_quantity' => $newQuantity,
+                'adjustment_type' => $adjustmentType,
+            ];
+        });
     }
 
     public function formatInventory(Product $product): array

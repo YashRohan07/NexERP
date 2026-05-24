@@ -4,10 +4,12 @@ namespace App\Modules\Inventory\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Modules\Inventory\Requests\AdjustStockRequest;
 use App\Modules\Inventory\Services\InventoryService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use InvalidArgumentException;
 
 class InventoryController extends Controller
 {
@@ -41,9 +43,16 @@ class InventoryController extends Controller
         ]);
     }
 
-    public function adjustStock(): JsonResponse
+    public function adjustStock(AdjustStockRequest $request, Product $product): JsonResponse
     {
-        // Full stock adjustment logic will be added in Step 3.
-        return ApiResponse::success('Inventory adjust stock route is ready');
+        try {
+            $inventory = $this->inventoryService->adjustStock($product, $request->validated());
+
+            return ApiResponse::success('Stock adjusted successfully', [
+                'inventory' => $inventory,
+            ]);
+        } catch (InvalidArgumentException $exception) {
+            return ApiResponse::error($exception->getMessage(), null, 422);
+        }
     }
 }
