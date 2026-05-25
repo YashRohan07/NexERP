@@ -9,6 +9,7 @@ use App\Modules\Sales\Services\SaleService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use InvalidArgumentException;
 
 class SaleController extends Controller
 {
@@ -50,5 +51,31 @@ class SaleController extends Controller
         return ApiResponse::success('Sale fetched successfully', [
             'sale' => $this->saleService->formatSale($sale, true),
         ]);
+    }
+
+    public function confirm(Sale $sale): JsonResponse
+    {
+        try {
+            $sale = $this->saleService->confirmSale($sale);
+
+            return ApiResponse::success('Sale confirmed successfully', [
+                'sale' => $this->saleService->formatSale($sale, true),
+            ]);
+        } catch (InvalidArgumentException $exception) {
+            return ApiResponse::error($exception->getMessage(), null, 422);
+        }
+    }
+
+    public function cancel(Sale $sale): JsonResponse
+    {
+        try {
+            $sale = $this->saleService->cancelSale($sale);
+
+            return ApiResponse::success('Sale cancelled successfully', [
+                'sale' => $this->saleService->formatSale($sale, true),
+            ]);
+        } catch (InvalidArgumentException $exception) {
+            return ApiResponse::error($exception->getMessage(), null, 422);
+        }
     }
 }

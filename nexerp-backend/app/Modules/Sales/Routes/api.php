@@ -17,5 +17,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::delete('/customers/{customer}', [CustomerController::class, 'destroy']);
 
         Route::post('/sales', [SaleController::class, 'store']);
+        Route::patch('/sales/{sale}/confirm', [SaleController::class, 'confirm']);
+        Route::patch('/sales/{sale}/cancel', [SaleController::class, 'cancel']);
     });
 });

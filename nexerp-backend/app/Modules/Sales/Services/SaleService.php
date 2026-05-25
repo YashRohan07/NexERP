@@ -7,6 +7,7 @@ use App\Models\SaleItem;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class SaleService
 {
@@ -77,6 +78,63 @@ class SaleService
 
             return $sale->load(['customer', 'items.product']);
         });
+    }
+
+    public function confirmSale(Sale $sale): Sale
+    {
+        return DB::transaction(function () use ($sale): Sale {
+            $sale->load(['items.product.inventory']);
+
+            if ($sale->status === 'confirmed') {
+                throw new InvalidArgumentException('Sale is already confirmed.');
+            }
+
+            if ($sale->status === 'cancelled') {
+                throw new InvalidArgumentException('Cancelled sale cannot be confirmed.');
+            }
+
+            foreach ($sale->items as $item) {
+                $product = $item->product;
+                $inventory = $product?->inventory;
+
+                if (! $product || ! $inventory) {
+                    throw new InvalidArgumentException('Inventory record not found for product.');
+                }
+
+                if ($inventory->quantity < $item->quantity) {
+                    throw new InvalidArgumentException(
+                        "Insufficient stock for product: {$product->name}"
+                    );
+                }
+            }
+
+            foreach ($sale->items as $item) {
+                $inventory = $item->product->inventory;
+
+                $inventory->update([
+                    'quantity' => $inventory->quantity - $item->quantity,
+                ]);
+            }
+
+            $sale->update([
+                'status' => 'confirmed',
+            ]);
+
+            return $sale->refresh()->load(['customer', 'items.product']);
+        });
+    }
+
+    public function cancelSale(Sale $sale): Sale
+    {
+        if ($sale->status !== 'draft') {
+            throw new InvalidArgumentException('Only draft sale can be cancelled.');
+        }
+
+        $sale->update([
+            'status' => 'cancelled',
+        ]);
+
+        return $sale->refresh()->load(['customer', 'items.product']);
     }
 
     public function formatSale(Sale $sale, bool $withItems = false): array
