@@ -23,7 +23,7 @@ class SupplierController extends Controller
         $suppliers = $this->supplierService->getSuppliers($request->query());
 
         return ApiResponse::success('Suppliers fetched successfully', [
-            'suppliers' => $suppliers->getCollection()
+            'suppliers' => collect($suppliers->items())
                 ->map(fn (Supplier $supplier): array => $this->supplierService->formatSupplier($supplier))
                 ->values(),
             'pagination' => [
