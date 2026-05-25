@@ -88,6 +88,17 @@ class PosService
         });
     }
 
+    public function getReceipt(Sale $sale): array
+    {
+        if ($sale->sale_channel !== 'pos') {
+            throw new InvalidArgumentException('POS receipt not found.');
+        }
+
+        return $this->formatReceipt(
+            $sale->load(['customer', 'items.product'])
+        );
+    }
+
     public function formatProduct(Product $product): array
     {
         $inventory = $product->inventory;

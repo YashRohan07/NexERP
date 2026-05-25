@@ -4,6 +4,7 @@ namespace App\Modules\POS\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\Sale;
 use App\Modules\POS\Requests\PosCheckoutRequest;
 use App\Modules\POS\Services\PosService;
 use App\Support\ApiResponse;
@@ -45,6 +46,19 @@ class PosController extends Controller
             ], 201);
         } catch (InvalidArgumentException $exception) {
             return ApiResponse::error($exception->getMessage(), null, 422);
+        }
+    }
+
+    public function receipt(Sale $sale): JsonResponse
+    {
+        try {
+            $receipt = $this->posService->getReceipt($sale);
+
+            return ApiResponse::success('POS receipt fetched successfully', [
+                'receipt' => $receipt,
+            ]);
+        } catch (InvalidArgumentException $exception) {
+            return ApiResponse::error($exception->getMessage(), null, 404);
         }
     }
 }
