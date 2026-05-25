@@ -2,10 +2,12 @@
 
 namespace App\Modules\Purchase\Services;
 
+use App\Models\Inventory;
 use App\Models\Purchase;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class PurchaseService
 {
@@ -79,6 +81,86 @@ class PurchaseService
     public function getPurchase(int $id): Purchase
     {
         return Purchase::with(['supplier', 'items.product'])->findOrFail($id);
+    }
+
+    public function confirmPurchase(Purchase $purchase): Purchase
+    {
+        return DB::transaction(function () use ($purchase): Purchase {
+            $purchase = Purchase::with(['supplier', 'items.product'])
+                ->lockForUpdate()
+                ->findOrFail($purchase->id);
+
+            if ($purchase->status === 'confirmed') {
+                throw new InvalidArgumentException('Purchase is already confirmed.');
+            }
+
+            if ($purchase->status === 'cancelled') {
+                throw new InvalidArgumentException('Cancelled purchase cannot be confirmed.');
+            }
+
+            foreach ($purchase->items as $item) {
+                if (! $item->product) {
+                    throw new InvalidArgumentException('Purchase contains an unavailable product.');
+                }
+
+                $inventory = Inventory::query()
+                    ->where('product_id', $item->product_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $inventory) {
+                    throw new InvalidArgumentException('Inventory record not found for purchase item product.');
+                }
+
+                $oldQuantity = (int) $inventory->quantity;
+                $oldPrice = (float) $inventory->purchase_price;
+                $purchaseQuantity = (int) $item->quantity;
+                $purchasePrice = (float) $item->purchase_price;
+
+                $newQuantity = $oldQuantity + $purchaseQuantity;
+
+                if ($oldQuantity === 0) {
+                    $newPrice = $purchasePrice;
+                } else {
+                    $newPrice = (($oldQuantity * $oldPrice) + ($purchaseQuantity * $purchasePrice)) / $newQuantity;
+                }
+
+                $inventory->update([
+                    'quantity' => $newQuantity,
+                    'purchase_price' => round($newPrice, 2),
+                    'purchase_date' => $purchase->purchase_date,
+                ]);
+            }
+
+            $purchase->update([
+                'status' => 'confirmed',
+            ]);
+
+            return $purchase->load(['supplier', 'items.product']);
+        });
+    }
+
+    public function cancelPurchase(Purchase $purchase): Purchase
+    {
+        return DB::transaction(function () use ($purchase): Purchase {
+            $purchase = Purchase::with(['supplier', 'items.product'])
+                ->lockForUpdate()
+                ->findOrFail($purchase->id);
+
+            if ($purchase->status === 'confirmed') {
+                throw new InvalidArgumentException('Confirmed purchase cannot be cancelled.');
+            }
+
+            if ($purchase->status === 'cancelled') {
+                throw new InvalidArgumentException('Purchase is already cancelled.');
+            }
+
+            $purchase->update([
+                'status' => 'cancelled',
+            ]);
+
+            return $purchase->load(['supplier', 'items.product']);
+        });
     }
 
     public function formatPurchase(Purchase $purchase): array

@@ -9,6 +9,7 @@ use App\Modules\Purchase\Services\PurchaseService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use InvalidArgumentException;
 
 class PurchaseController extends Controller
 {
@@ -50,5 +51,31 @@ class PurchaseController extends Controller
         return ApiResponse::success('Purchase fetched successfully', [
             'purchase' => $this->purchaseService->formatPurchaseDetails($purchase),
         ]);
+    }
+
+    public function confirm(Purchase $purchase): JsonResponse
+    {
+        try {
+            $purchase = $this->purchaseService->confirmPurchase($purchase);
+
+            return ApiResponse::success('Purchase confirmed successfully', [
+                'purchase' => $this->purchaseService->formatPurchaseDetails($purchase),
+            ]);
+        } catch (InvalidArgumentException $exception) {
+            return ApiResponse::error($exception->getMessage(), null, 422);
+        }
+    }
+
+    public function cancel(Purchase $purchase): JsonResponse
+    {
+        try {
+            $purchase = $this->purchaseService->cancelPurchase($purchase);
+
+            return ApiResponse::success('Purchase cancelled successfully', [
+                'purchase' => $this->purchaseService->formatPurchaseDetails($purchase),
+            ]);
+        } catch (InvalidArgumentException $exception) {
+            return ApiResponse::error($exception->getMessage(), null, 422);
+        }
     }
 }
