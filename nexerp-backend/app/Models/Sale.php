@@ -12,6 +12,8 @@ class Sale extends Model
         'customer_id',
         'sale_date',
         'status',
+        'sale_channel',
+        'payment_method',
         'total_amount',
         'note',
     ];
