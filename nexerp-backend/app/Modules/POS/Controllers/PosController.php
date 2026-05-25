@@ -4,10 +4,12 @@ namespace App\Modules\POS\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Modules\POS\Requests\PosCheckoutRequest;
 use App\Modules\POS\Services\PosService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use InvalidArgumentException;
 
 class PosController extends Controller
 {
@@ -31,5 +33,18 @@ class PosController extends Controller
                 'last_page' => $products->lastPage(),
             ],
         ]);
+    }
+
+    public function checkout(PosCheckoutRequest $request): JsonResponse
+    {
+        try {
+            $receipt = $this->posService->checkout($request->validated());
+
+            return ApiResponse::success('POS checkout completed successfully', [
+                'receipt' => $receipt,
+            ], 201);
+        } catch (InvalidArgumentException $exception) {
+            return ApiResponse::error($exception->getMessage(), null, 422);
+        }
     }
 }
