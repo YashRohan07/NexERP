@@ -4,6 +4,9 @@ import LoginPage from "../pages/auth/LoginPage";
 import DashboardPage from "../pages/dashboard/DashboardPage";
 import InventoryPage from "../pages/inventory/InventoryPage";
 import ProductPage from "../pages/product/ProductPage";
+import PurchaseDetailsPage from "../pages/purchase/PurchaseDetailsPage";
+import PurchasePage from "../pages/purchase/PurchasePage";
+import SupplierPage from "../pages/purchase/SupplierPage";
 import ProtectedRoute from "./ProtectedRoute";
 
 function PlaceholderPage({ title }) {
@@ -27,14 +30,9 @@ function AppRoutes() {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/products" element={<ProductPage />} />
           <Route path="/inventory" element={<InventoryPage />} />
-          <Route
-            path="/suppliers"
-            element={<PlaceholderPage title="Suppliers" />}
-          />
-          <Route
-            path="/purchases"
-            element={<PlaceholderPage title="Purchases" />}
-          />
+          <Route path="/suppliers" element={<SupplierPage />} />
+          <Route path="/purchases" element={<PurchasePage />} />
+          <Route path="/purchases/:id" element={<PurchaseDetailsPage />} />
           <Route
             path="/customers"
             element={<PlaceholderPage title="Customers" />}
