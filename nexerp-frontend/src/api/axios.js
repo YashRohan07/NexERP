@@ -1,10 +1,11 @@
 import axios from "axios";
-import { clearAuth, getToken } from "../utils/auth";
+import { getToken, logout } from "../utils/auth";
 
 const api = axios.create({
   baseURL: "http://127.0.0.1:8000/api",
   headers: {
     Accept: "application/json",
+    "Content-Type": "application/json",
   },
 });
 
@@ -22,11 +23,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      clearAuth();
-
-      if (window.location.pathname !== "/login") {
-        window.location.href = "/login";
-      }
+      logout();
     }
 
     return Promise.reject(error);

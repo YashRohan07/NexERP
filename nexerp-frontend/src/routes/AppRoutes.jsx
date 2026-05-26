@@ -8,47 +8,39 @@ import ProductPage from "../pages/product/ProductPage";
 import PurchaseDetailsPage from "../pages/purchase/PurchaseDetailsPage";
 import PurchasePage from "../pages/purchase/PurchasePage";
 import SupplierPage from "../pages/purchase/SupplierPage";
+import ReportPage from "../pages/reports/ReportPage";
 import CustomerPage from "../pages/sales/CustomerPage";
 import SaleDetailsPage from "../pages/sales/SaleDetailsPage";
 import SalePage from "../pages/sales/SalePage";
 import ProtectedRoute from "./ProtectedRoute";
-
-function PlaceholderPage({ title }) {
-  return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6">
-      <h1 className="text-xl font-semibold text-gray-900">{title}</h1>
-      <p className="mt-2 text-sm text-gray-600">
-        This page will be implemented in the next frontend steps.
-      </p>
-    </div>
-  );
-}
 
 function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
 
-      <Route element={<ProtectedRoute />}>
-        <Route element={<DashboardLayout />}>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/products" element={<ProductPage />} />
-          <Route path="/inventory" element={<InventoryPage />} />
-          <Route path="/suppliers" element={<SupplierPage />} />
-          <Route path="/purchases" element={<PurchasePage />} />
-          <Route path="/purchases/:id" element={<PurchaseDetailsPage />} />
-          <Route path="/customers" element={<CustomerPage />} />
-          <Route path="/sales" element={<SalePage />} />
-          <Route path="/sales/:id" element={<SaleDetailsPage />} />
-          <Route path="/pos" element={<PosPage />} />
-          <Route
-            path="/reports"
-            element={<PlaceholderPage title="Reports" />}
-          />
-        </Route>
+      <Route
+        element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/products" element={<ProductPage />} />
+        <Route path="/inventory" element={<InventoryPage />} />
+        <Route path="/suppliers" element={<SupplierPage />} />
+        <Route path="/purchases" element={<PurchasePage />} />
+        <Route path="/purchases/:id" element={<PurchaseDetailsPage />} />
+        <Route path="/customers" element={<CustomerPage />} />
+        <Route path="/sales" element={<SalePage />} />
+        <Route path="/sales/:id" element={<SaleDetailsPage />} />
+        <Route path="/pos" element={<PosPage />} />
+        <Route path="/reports" element={<ReportPage />} />
       </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 }

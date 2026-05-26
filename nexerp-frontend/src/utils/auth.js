@@ -11,29 +11,35 @@ export function getToken() {
 }
 
 export function getUser() {
-  const user = localStorage.getItem(USER_KEY);
+  const storedUser = localStorage.getItem(USER_KEY);
 
-  if (!user) {
+  if (!storedUser) {
     return null;
   }
 
   try {
-    return JSON.parse(user);
+    return JSON.parse(storedUser);
   } catch {
-    clearAuth();
+    localStorage.removeItem(USER_KEY);
     return null;
   }
 }
 
 export function getRole() {
-  return getUser()?.role || null;
+  const user = getUser();
+
+  return String(user?.role || "").toLowerCase();
+}
+
+export function isAdmin() {
+  return getRole() === "admin";
 }
 
 export function isAuthenticated() {
   return Boolean(getToken());
 }
 
-export function clearAuth() {
+export function logout() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
 }

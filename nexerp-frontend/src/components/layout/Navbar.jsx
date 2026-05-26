@@ -1,37 +1,31 @@
 import { useNavigate } from "react-router-dom";
-import { logout } from "../../api/authApi";
-import Button from "../common/Button";
-import { clearAuth, getUser } from "../../utils/auth";
+import { getUser, logout } from "../../utils/auth";
 
 function Navbar() {
   const navigate = useNavigate();
   const user = getUser();
 
-  async function handleLogout() {
-    try {
-      await logout();
-    } catch {
-      // Local logout should still happen even if the API request fails.
-    } finally {
-      clearAuth();
-      navigate("/login");
-    }
+  function handleLogout() {
+    logout();
+    navigate("/login", { replace: true });
   }
 
   return (
-    <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 md:px-6">
-      <div>
-        <p className="text-sm font-semibold text-gray-900">
-          {user?.name || "NexERP User"}
-        </p>
-        <p className="text-xs capitalize text-gray-500">
-          Role: {user?.role || "unknown"}
-        </p>
-      </div>
+    <header className="border-b border-gray-200 bg-white px-6 py-4">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="font-semibold text-gray-900">{user?.name || "User"}</p>
+          <p className="text-xs text-gray-500">Role: {user?.role || "-"}</p>
+        </div>
 
-      <Button variant="outline" onClick={handleLogout}>
-        Logout
-      </Button>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          Logout
+        </button>
+      </div>
     </header>
   );
 }

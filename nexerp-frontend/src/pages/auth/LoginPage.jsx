@@ -17,7 +17,7 @@ function LoginPage() {
   const [error, setError] = useState("");
 
   if (getToken()) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   function handleChange(event) {
@@ -30,10 +30,10 @@ function LoginPage() {
   }
 
   function extractLoginData(responseData) {
-    const payload = responseData?.data || responseData;
+    const payload = responseData?.data || responseData || {};
 
     return {
-      token: payload?.token || payload?.access_token,
+      token: payload?.token || payload?.access_token || payload?.plainTextToken,
       user: payload?.user,
     };
   }
@@ -54,7 +54,7 @@ function LoginPage() {
       }
 
       saveAuth(token, user);
-      navigate("/");
+      navigate("/dashboard", { replace: true });
     } catch (err) {
       const message =
         err.response?.data?.message ||
