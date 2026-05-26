@@ -16,3 +16,4 @@ require __DIR__.'/../app/Modules/Inventory/Routes/api.php';
 require __DIR__.'/../app/Modules/Purchase/Routes/api.php';
 require __DIR__.'/../app/Modules/Sales/Routes/api.php';
 require __DIR__.'/../app/Modules/POS/Routes/api.php';
+require __DIR__.'/../app/Modules/Dashboard/Routes/api.php';
