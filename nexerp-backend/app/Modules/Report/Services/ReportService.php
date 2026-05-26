@@ -120,6 +120,94 @@ class ReportService
         ];
     }
 
+    public function getPurchaseReport(array $filters = []): array
+    {
+        $purchases = Purchase::query()
+            ->with('supplier:id,name')
+            ->withCount('items')
+            ->where('status', 'confirmed')
+            ->when(
+                ! empty($filters['date_from']),
+                fn (Builder $query) => $query->whereDate('purchase_date', '>=', $filters['date_from'])
+            )
+            ->when(
+                ! empty($filters['date_to']),
+                fn (Builder $query) => $query->whereDate('purchase_date', '<=', $filters['date_to'])
+            )
+            ->latest('purchase_date')
+            ->latest('id')
+            ->get();
+
+        $items = $purchases->map(function (Purchase $purchase) {
+            return [
+                'id' => $purchase->id,
+                'supplier' => $purchase->supplier?->name,
+                'purchase_date' => $purchase->purchase_date?->format('Y-m-d'),
+                'status' => $purchase->status,
+                'total_amount' => $this->formatMoney($purchase->total_amount),
+                'items_count' => (int) $purchase->items_count,
+            ];
+        });
+
+        return [
+            'summary' => [
+                'total_purchases' => $purchases->count(),
+                'total_purchase_amount' => $this->formatMoney($purchases->sum('total_amount')),
+            ],
+            'filters' => $this->reportFilters($filters),
+            'items' => $items->values()->toArray(),
+        ];
+    }
+
+    public function getSalesReport(array $filters = []): array
+    {
+        $sales = Sale::query()
+            ->with('customer:id,name')
+            ->withCount('items')
+            ->where('status', 'confirmed')
+            ->when(
+                ! empty($filters['date_from']),
+                fn (Builder $query) => $query->whereDate('sale_date', '>=', $filters['date_from'])
+            )
+            ->when(
+                ! empty($filters['date_to']),
+                fn (Builder $query) => $query->whereDate('sale_date', '<=', $filters['date_to'])
+            )
+            ->when(
+                ! empty($filters['sale_channel']) && $filters['sale_channel'] !== 'all',
+                fn (Builder $query) => $query->where('sale_channel', $filters['sale_channel'])
+            )
+            ->latest('sale_date')
+            ->latest('id')
+            ->get();
+
+        $items = $sales->map(function (Sale $sale) {
+            return [
+                'id' => $sale->id,
+                'customer' => $sale->customer?->name,
+                'sale_date' => $sale->sale_date?->format('Y-m-d'),
+                'sale_channel' => $sale->sale_channel,
+                'status' => $sale->status,
+                'payment_method' => $sale->payment_method,
+                'total_amount' => $this->formatMoney($sale->total_amount),
+                'items_count' => (int) $sale->items_count,
+            ];
+        });
+
+        return [
+            'summary' => [
+                'total_sales' => $sales->count(),
+                'total_sales_amount' => $this->formatMoney($sales->sum('total_amount')),
+            ],
+            'filters' => [
+                'date_from' => $filters['date_from'] ?? null,
+                'date_to' => $filters['date_to'] ?? null,
+                'sale_channel' => $filters['sale_channel'] ?? 'all',
+            ],
+            'items' => $items->values()->toArray(),
+        ];
+    }
+
     private function inventorySummary(Collection $inventories): array
     {
         return [
