@@ -56,11 +56,7 @@ class ReportController extends Controller
 
     public function sales(Request $request)
     {
-        $filters = $request->validate([
-            'date_from' => ['nullable', 'date'],
-            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
-            'sale_channel' => ['nullable', 'in:all,sales,pos'],
-        ]);
+        $filters = $this->validateSalesFilters($request);
 
         return ApiResponse::success(
             'Sales report fetched successfully',
@@ -104,11 +100,56 @@ class ReportController extends Controller
         );
     }
 
+    public function purchasesPdf(Request $request)
+    {
+        $filters = $this->validateDateFilters($request);
+        $report = $this->reportService->getPurchaseReport($filters);
+
+        return $this->pdfExportService->download(
+            'pdf.purchase-report',
+            [
+                'title' => 'Purchase Report',
+                'generatedAt' => now()->format('Y-m-d H:i:s'),
+                'summary' => $report['summary'],
+                'filters' => $report['filters'],
+                'items' => $report['items'],
+            ],
+            'purchase-report.pdf'
+        );
+    }
+
+    public function salesPdf(Request $request)
+    {
+        $filters = $this->validateSalesFilters($request);
+        $report = $this->reportService->getSalesReport($filters);
+
+        return $this->pdfExportService->download(
+            'pdf.sales-report',
+            [
+                'title' => 'Sales Report',
+                'generatedAt' => now()->format('Y-m-d H:i:s'),
+                'summary' => $report['summary'],
+                'filters' => $report['filters'],
+                'items' => $report['items'],
+            ],
+            'sales-report.pdf'
+        );
+    }
+
     private function validateDateFilters(Request $request): array
     {
         return $request->validate([
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+        ]);
+    }
+
+    private function validateSalesFilters(Request $request): array
+    {
+        return $request->validate([
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+            'sale_channel' => ['nullable', 'in:all,sales,pos'],
         ]);
     }
 }

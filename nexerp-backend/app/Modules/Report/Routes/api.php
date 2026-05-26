@@ -13,5 +13,8 @@ Route::middleware('auth:sanctum')->prefix('reports')->group(function () {
     Route::get('/low-stock/pdf', [ReportController::class, 'lowStockPdf']);
 
     Route::get('/purchases', [ReportController::class, 'purchases']);
+    Route::get('/purchases/pdf', [ReportController::class, 'purchasesPdf']);
+
     Route::get('/sales', [ReportController::class, 'sales']);
+    Route::get('/sales/pdf', [ReportController::class, 'salesPdf']);
 });
