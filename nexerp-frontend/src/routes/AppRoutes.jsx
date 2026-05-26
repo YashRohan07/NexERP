@@ -3,6 +3,7 @@ import DashboardLayout from "../components/layout/DashboardLayout";
 import LoginPage from "../pages/auth/LoginPage";
 import DashboardPage from "../pages/dashboard/DashboardPage";
 import InventoryPage from "../pages/inventory/InventoryPage";
+import PosPage from "../pages/pos/PosPage";
 import ProductPage from "../pages/product/ProductPage";
 import PurchaseDetailsPage from "../pages/purchase/PurchaseDetailsPage";
 import PurchasePage from "../pages/purchase/PurchasePage";
@@ -39,7 +40,7 @@ function AppRoutes() {
           <Route path="/customers" element={<CustomerPage />} />
           <Route path="/sales" element={<SalePage />} />
           <Route path="/sales/:id" element={<SaleDetailsPage />} />
-          <Route path="/pos" element={<PlaceholderPage title="POS" />} />
+          <Route path="/pos" element={<PosPage />} />
           <Route
             path="/reports"
             element={<PlaceholderPage title="Reports" />}
