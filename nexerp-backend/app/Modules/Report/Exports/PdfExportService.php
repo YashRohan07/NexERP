@@ -2,7 +2,13 @@
 
 namespace App\Modules\Report\Exports;
 
+use Barryvdh\DomPDF\Facade\Pdf;
+use Symfony\Component\HttpFoundation\Response;
+
 class PdfExportService
 {
-    // PDF export methods will be added in Step 4.
+    public function download(string $view, array $data, string $fileName): Response
+    {
+        return Pdf::loadView($view, $data)->download($fileName);
+    }
 }
