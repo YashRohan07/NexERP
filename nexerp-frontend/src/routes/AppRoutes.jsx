@@ -2,6 +2,8 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import LoginPage from "../pages/auth/LoginPage";
 import DashboardPage from "../pages/dashboard/DashboardPage";
+import InventoryPage from "../pages/inventory/InventoryPage";
+import ProductPage from "../pages/product/ProductPage";
 import ProtectedRoute from "./ProtectedRoute";
 
 function PlaceholderPage({ title }) {
@@ -23,14 +25,8 @@ function AppRoutes() {
       <Route element={<ProtectedRoute />}>
         <Route element={<DashboardLayout />}>
           <Route path="/" element={<DashboardPage />} />
-          <Route
-            path="/products"
-            element={<PlaceholderPage title="Products" />}
-          />
-          <Route
-            path="/inventory"
-            element={<PlaceholderPage title="Inventory" />}
-          />
+          <Route path="/products" element={<ProductPage />} />
+          <Route path="/inventory" element={<InventoryPage />} />
           <Route
             path="/suppliers"
             element={<PlaceholderPage title="Suppliers" />}
