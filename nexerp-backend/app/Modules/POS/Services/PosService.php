@@ -3,9 +3,11 @@
 namespace App\Modules\POS\Services;
 
 use App\Models\Customer;
+use App\Models\Inventory;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Support\AppCache;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +24,11 @@ class PosService
         }
 
         return Product::query()
-            ->with('inventory')
+            /*
+             * Select only required inventory columns for POS product search.
+             * POS needs stock, unit cost, and low-stock threshold only.
+             */
+            ->with('inventory:id,product_id,quantity,purchase_price,purchase_date,low_stock_threshold')
             ->when($filters['search'] ?? null, function (Builder $query, string $search): void {
                 $query->where(function (Builder $query) use ($search): void {
                     $query->where('sku', 'like', "%{$search}%")
@@ -38,13 +44,33 @@ class PosService
         return DB::transaction(function () use ($data): array {
             $customer = $this->getCustomer($data['customer_id'] ?? null);
 
+            $items = collect($data['items']);
+            $productIds = $items->pluck('product_id')->unique()->values();
+
             $products = Product::query()
-                ->with('inventory')
-                ->whereIn('id', collect($data['items'])->pluck('product_id')->all())
+                ->whereIn('id', $productIds->all())
                 ->get()
                 ->keyBy('id');
 
-            $this->checkStockAvailability($data['items'], $products);
+            /*
+             * Lock inventory rows before stock validation and stock decrease.
+             * This prevents overselling during concurrent POS checkouts.
+             */
+            $inventories = Inventory::query()
+                ->whereIn('product_id', $productIds->all())
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('product_id');
+
+            /*
+             * Aggregate quantity by product_id.
+             * This prevents duplicate cart lines from bypassing stock validation.
+             */
+            $requiredQuantities = $items
+                ->groupBy('product_id')
+                ->map(fn ($groupedItems): int => (int) $groupedItems->sum('quantity'));
+
+            $this->checkStockAvailability($requiredQuantities, $products, $inventories);
 
             $sale = Sale::create([
                 'customer_id' => $customer->id,
@@ -58,9 +84,12 @@ class PosService
 
             $totalAmount = 0;
 
+            /*
+             * Keep original cart lines in sale_items.
+             * Stock decrease is done once per product later using aggregated quantity.
+             */
             foreach ($data['items'] as $item) {
                 $product = $products->get($item['product_id']);
-                $inventory = $product->inventory;
                 $lineTotal = (int) $item['quantity'] * (float) $item['selling_price'];
 
                 SaleItem::create([
@@ -71,16 +100,25 @@ class PosService
                     'line_total' => $lineTotal,
                 ]);
 
-                $inventory->update([
-                    'quantity' => $inventory->quantity - $item['quantity'],
-                ]);
-
                 $totalAmount += $lineTotal;
+            }
+
+            /*
+             * Decrease stock once per product using aggregated quantity.
+             */
+            foreach ($requiredQuantities as $productId => $requiredQuantity) {
+                $inventory = $inventories->get($productId);
+
+                $inventory->update([
+                    'quantity' => (int) $inventory->quantity - $requiredQuantity,
+                ]);
             }
 
             $sale->update([
                 'total_amount' => $totalAmount,
             ]);
+
+            AppCache::clearDashboard();
 
             return $this->formatReceipt(
                 $sale->refresh()->load(['customer', 'items.product'])
@@ -114,7 +152,7 @@ class PosService
             'color' => $product->color,
             'available_stock' => $quantity,
             'unit_cost' => number_format((float) $unitCost, 2, '.', ''),
-            'stock_status' => $this->getStockStatus($quantity, $lowStockThreshold),
+            'stock_status' => $this->getStockStatus((int) $quantity, (int) $lowStockThreshold),
         ];
     }
 
@@ -161,22 +199,22 @@ class PosService
         );
     }
 
-    private function checkStockAvailability(array $items, $products): void
+    private function checkStockAvailability($requiredQuantities, $products, $inventories): void
     {
-        foreach ($items as $item) {
-            $product = $products->get($item['product_id']);
+        foreach ($requiredQuantities as $productId => $requiredQuantity) {
+            $product = $products->get($productId);
 
             if (! $product) {
                 throw new InvalidArgumentException('Product is unavailable.');
             }
 
-            $inventory = $product->inventory;
+            $inventory = $inventories->get($productId);
 
             if (! $inventory) {
                 throw new InvalidArgumentException('Inventory record not found for product.');
             }
 
-            if ($inventory->quantity < $item['quantity']) {
+            if ((int) $inventory->quantity < $requiredQuantity) {
                 throw new InvalidArgumentException(
                     "Insufficient stock for product: {$product->name}"
                 );

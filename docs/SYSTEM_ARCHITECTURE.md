@@ -4,22 +4,22 @@
 
 NexERP is built as a Laravel REST API backend with a React SPA frontend.
 
-The system follows a Modular Monolith architecture. The application stays as one Laravel project,
-but features are organized by modules.
+The system follows a modular monolith architecture. The application stays as one Laravel project, but the backend features are organized by modules.
 
-This approach keeps the project simple, maintainable, and beginner-friendly.
+This approach keeps the project simple, maintainable, and suitable for an ERP MVP.
 
 ---
 
-## Main Architecture Decision
+## Main Architecture
 
 NexERP uses:
 
-- Modular Monolith architecture
+- Modular monolith architecture
 - Laravel MVC inside modules
 - REST API backend
 - React SPA frontend
 - MySQL relational database
+- Sanctum token-based authentication
 
 ---
 
@@ -27,11 +27,11 @@ NexERP uses:
 
 This architecture is used because:
 
-- It keeps the project organized
-- It avoids unnecessary complexity
-- It is easier to maintain
-- It is suitable for an ERP MVP
-- It supports future expansion
+- It keeps related files grouped by feature
+- It avoids unnecessary microservice complexity
+- It is easier to maintain and debug
+- It fits the MVP scope
+- It can be extended later with new modules
 
 ---
 
@@ -43,72 +43,72 @@ Backend module structure:
 
 ```txt
 app/
-  Modules/
-    Auth/
-      Controllers/
-      Requests/
-      Services/
-      Routes/
-
-    Product/
-      Controllers/
-      Requests/
-      Services/
-      Routes/
-
-    Inventory/
-      Controllers/
-      Requests/
-      Services/
-      Routes/
-
-    Dashboard/
-      Controllers/
-      Services/
-      Routes/
-
-    Report/
-      Controllers/
-      Services/
-      Exports/
-      Routes/
+├── Http/
+│   └── Middleware/
+│       └── RoleMiddleware.php
+├── Models/
+├── Modules/
+│   ├── Auth/
+│   │   ├── Controllers/
+│   │   ├── Requests/
+│   │   ├── Services/
+│   │   └── Routes/
+│   ├── Product/
+│   │   ├── Controllers/
+│   │   ├── Requests/
+│   │   ├── Services/
+│   │   └── Routes/
+│   ├── Inventory/
+│   │   ├── Controllers/
+│   │   ├── Requests/
+│   │   ├── Services/
+│   │   └── Routes/
+│   ├── Purchase/
+│   │   ├── Controllers/
+│   │   ├── Requests/
+│   │   ├── Services/
+│   │   └── Routes/
+│   ├── Sales/
+│   │   ├── Controllers/
+│   │   ├── Requests/
+│   │   ├── Services/
+│   │   └── Routes/
+│   ├── POS/
+│   │   ├── Controllers/
+│   │   ├── Requests/
+│   │   ├── Services/
+│   │   └── Routes/
+│   ├── Dashboard/
+│   │   ├── Controllers/
+│   │   ├── Services/
+│   │   └── Routes/
+│   └── Report/
+│       ├── Controllers/
+│       ├── Requests/
+│       ├── Services/
+│       ├── Exports/
+│       └── Routes/
+└── Support/
+    ├── ApiResponse.php
+    └── AppCache.php
 ```
 
 ---
 
 ## Backend Module Rules
 
-Each module keeps related files together.
+Each module keeps related backend files together.
 
-- Controllers handle requests
+- Controllers handle HTTP requests
 - Requests handle validation
 - Services contain business logic
-- Routes define API endpoints
+- Routes define module endpoints
+- Models represent database tables and relationships
+- Support classes contain shared helpers
 
 Controllers should stay thin.
 
-Business logic should be written inside services.
-
----
-
-## Frontend Architecture
-
-The frontend will be built using React 19 and Vite.
-
-Main frontend pages:
-
-- Login
-- Dashboard
-- Products
-- Inventory
-- Reports
-
-The frontend will use:
-
-- React Router
-- Axios
-- Tailwind CSS
-- Protected routes
+Business rules should be written inside services.
 
 ---
 
@@ -118,10 +118,11 @@ The frontend will use:
 React Page
   → API Call
   → Laravel Route
+  → Middleware
   → Controller
-  → Request Validation
+  → Form Request Validation
   → Service
-  → Model
+  → Eloquent Model
   → MySQL Database
   → JSON Response
 ```
@@ -132,14 +133,13 @@ React Page
 
 Authentication uses Laravel Sanctum.
 
-Basic flow:
-
 ```txt
-Login Request
-  → Credential Check
-  → Sanctum Token Create
-  → Token Stored in Frontend
-  → Protected API Access
+Login request
+  → Validate credentials
+  → Create Sanctum token
+  → Return token and user data
+  → Frontend stores token
+  → Protected API requests use Bearer token
 ```
 
 ---
@@ -153,53 +153,251 @@ The MVP uses two roles:
 | admin  | Full access      |
 | member | View-only access |
 
+Role protection is handled by middleware.
+
+---
+
+## Backend Modules
+
+### Auth Module
+
+Handles:
+
+- Login
+- Logout
+- Current user
+- Sanctum token creation
+- Role-based access support
+
+### Product Module
+
+Handles:
+
+- Product CRUD
+- Search and filters
+- Pagination
+- Soft delete
+- Initial inventory creation
+
+### Inventory Module
+
+Handles:
+
+- Inventory list
+- Stock status
+- Manual stock adjustment
+- Low-stock filtering
+- Stock value calculation
+
+### Purchase Module
+
+Handles:
+
+- Supplier CRUD
+- Purchase draft creation
+- Purchase items
+- Purchase confirmation
+- Purchase cancellation
+- Stock increase after confirmation
+- Weighted average purchase price update
+
+### Sales Module
+
+Handles:
+
+- Customer CRUD
+- Sale draft creation
+- Sale items
+- Sale confirmation
+- Sale cancellation
+- Stock decrease after confirmation
+- Insufficient stock validation
+
+### POS Module
+
+Handles:
+
+- POS product search
+- Walk-in customer checkout
+- Existing customer checkout
+- Payment method selection
+- Confirmed sale creation
+- Stock decrease during checkout
+- Receipt-style response
+
+### Dashboard Module
+
+Handles:
+
+- Summary metrics
+- Inventory value
+- Low-stock count
+- Recent purchases
+- Recent sales
+- Low-stock preview
+- Short-lived dashboard caching
+
+### Report Module
+
+Handles:
+
+- Inventory report
+- Low stock report
+- Purchase report
+- Sales report
+- Date filters
+- Sales channel filter
+- PDF export
+
+---
+
+## Frontend Architecture
+
+The frontend is built with React 19 and Vite.
+
+Main frontend areas:
+
+- Login
+- Dashboard
+- Products
+- Inventory
+- Suppliers
+- Purchases
+- Customers
+- Sales
+- POS
+- Reports
+
+The frontend uses:
+
+- React Router
+- Axios
+- Tailwind CSS
+- Protected routes
+- Reusable UI components
+- Role-based UI conditions
+
 ---
 
 ## Database Overview
 
-Main MVP tables:
+Main tables:
 
 - users
 - products
 - inventories
+- suppliers
+- purchases
+- purchase_items
+- customers
+- sales
+- sale_items
 
-Relationship:
+Core relationships:
 
 ```txt
-products 1 : 1 inventories
+Product hasOne Inventory
+Inventory belongsTo Product
+
+Supplier hasMany Purchases
+Purchase belongsTo Supplier
+Purchase hasMany PurchaseItems
+
+Customer hasMany Sales
+Sale belongsTo Customer
+Sale hasMany SaleItems
+
+Product hasMany PurchaseItems
+Product hasMany SaleItems
 ```
 
-Products use soft deletes through the `deleted_at` column.
+---
 
-The inventories table uses a foreign key relationship with products.
+## Inventory Flow
+
+```txt
+Product create
+  → Initial inventory record created
+
+Purchase confirm
+  → Inventory quantity increases
+  → Purchase price updates using weighted average cost
+
+Sale confirm
+  → Stock availability checked
+  → Inventory quantity decreases
+
+POS checkout
+  → Confirmed sale created
+  → Stock availability checked
+  → Inventory quantity decreases instantly
+
+Manual adjustment
+  → Inventory quantity updates directly
+```
 
 ---
 
-## MVP Modules
+## Stock Safety
 
-The MVP includes:
+Stock-sensitive operations use:
 
-- Auth
-- Product
-- Inventory
-- Dashboard
-- Reports
+- Database transactions
+- Row-level locking
+- Stock availability validation
+- Aggregated quantity checks for duplicate product lines
+
+This helps prevent overselling and race conditions during concurrent requests.
 
 ---
 
-## Not Included Now
+## Dashboard and Reports
 
-The MVP will not include:
+Dashboard is used for quick business overview.
 
-- Sales
-- Purchase
+Reports are used for detailed filtered data and PDF export.
+
+| Area      | Purpose                          |
+| --------- | -------------------------------- |
+| Dashboard | Quick metrics and recent records |
+| Reports   | Detailed data and PDF export     |
+
+Dashboard uses short-lived caching. The cache is cleared after stock-changing operations so summary data stays accurate.
+
+---
+
+## Performance Notes
+
+NexERP includes practical MVP-level performance improvements:
+
+- Server-side pagination
+- Search and filters
+- Eager loading
+- Selected relationship columns
+- Indexed database columns
+- SQL aggregate queries
+- Dashboard caching
+- Targeted cache invalidation
+- Composite indexes for report filters
+
+---
+
+## Not Included in MVP
+
+The MVP does not include:
+
 - Accounting
-- POS
-- Distribution
-- Manufacturing
-- HR/Payroll
+- Tax/VAT
+- Payment due tracking
+- Supplier ledger
+- Customer ledger
+- Purchase return
+- Sales return
 - Multi-warehouse inventory
-- Complex permissions
+- Stock batches
+- Activity logs
+- HR/Payroll
+- Manufacturing
 - Microservices
 - Docker
 - Redux
@@ -212,7 +410,9 @@ The MVP will not include:
 The project follows:
 
 - OOP
-- SOLID
+- MVC
 - DRY
 - KISS
-- Clean Code
+- Thin controllers
+- Service-based business logic
+- Consistent API responses

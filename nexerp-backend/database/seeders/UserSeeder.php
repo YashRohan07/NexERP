@@ -9,20 +9,27 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        // Default admin user
-        User::create([
-            'name' => 'Admin User',
-            'email' => 'admin@nexerp.com',
-            'password' => 'password',
-            'role' => 'admin',
-        ]);
+        /*
+         * updateOrCreate keeps this seeder safe to run multiple times.
+         * User model has password cast set to "hashed", so plain "password"
+         * will be hashed automatically before storing.
+         */
+        User::updateOrCreate(
+            ['email' => 'admin@nexerp.com'],
+            [
+                'name' => 'Admin User',
+                'password' => 'password',
+                'role' => 'admin',
+            ]
+        );
 
-        // Default member user
-        User::create([
-            'name' => 'Member User',
-            'email' => 'member@nexerp.com',
-            'password' => 'password',
-            'role' => 'member',
-        ]);
+        User::updateOrCreate(
+            ['email' => 'member@nexerp.com'],
+            [
+                'name' => 'Member User',
+                'password' => 'password',
+                'role' => 'member',
+            ]
+        );
     }
 }

@@ -2,8 +2,10 @@
 
 namespace App\Modules\Sales\Services;
 
+use App\Models\Inventory;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Support\AppCache;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -52,6 +54,11 @@ class SaleService
                 'customer_id' => $data['customer_id'],
                 'sale_date' => $data['sale_date'],
                 'status' => 'draft',
+
+                // Normal sales module sale.
+                'sale_channel' => 'sales',
+                'payment_method' => null,
+
                 'total_amount' => 0,
                 'note' => $data['note'] ?? null,
             ]);
@@ -76,6 +83,8 @@ class SaleService
                 'total_amount' => $totalAmount,
             ]);
 
+            AppCache::clearDashboard();
+
             return $sale->load(['customer', 'items.product']);
         });
     }
@@ -83,7 +92,15 @@ class SaleService
     public function confirmSale(Sale $sale): Sale
     {
         return DB::transaction(function () use ($sale): Sale {
-            $sale->load(['items.product.inventory']);
+            /*
+             * Lock the sale row first.
+             * This prevents double confirmation from two concurrent requests.
+             */
+            $sale = Sale::query()
+                ->with(['customer', 'items.product'])
+                ->whereKey($sale->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
             if ($sale->status === 'confirmed') {
                 throw new InvalidArgumentException('Sale is already confirmed.');
@@ -93,26 +110,44 @@ class SaleService
                 throw new InvalidArgumentException('Cancelled sale cannot be confirmed.');
             }
 
-            foreach ($sale->items as $item) {
-                $product = $item->product;
-                $inventory = $product?->inventory;
+            /*
+             * Aggregate quantity by product_id.
+             * This prevents duplicate line items from bypassing stock validation.
+             */
+            $requiredQuantities = $sale->items
+                ->groupBy('product_id')
+                ->map(fn ($items): int => (int) $items->sum('quantity'));
+
+            $inventories = Inventory::query()
+                ->whereIn('product_id', $requiredQuantities->keys()->all())
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('product_id');
+
+            foreach ($requiredQuantities as $productId => $requiredQuantity) {
+                $inventory = $inventories->get($productId);
+                $saleItem = $sale->items->firstWhere('product_id', $productId);
+                $product = $saleItem?->product;
 
                 if (! $product || ! $inventory) {
                     throw new InvalidArgumentException('Inventory record not found for product.');
                 }
 
-                if ($inventory->quantity < $item->quantity) {
+                if ((int) $inventory->quantity < $requiredQuantity) {
                     throw new InvalidArgumentException(
                         "Insufficient stock for product: {$product->name}"
                     );
                 }
             }
 
-            foreach ($sale->items as $item) {
-                $inventory = $item->product->inventory;
+            /*
+             * Decrease stock once per product using the aggregated quantity.
+             */
+            foreach ($requiredQuantities as $productId => $requiredQuantity) {
+                $inventory = $inventories->get($productId);
 
                 $inventory->update([
-                    'quantity' => $inventory->quantity - $item->quantity,
+                    'quantity' => (int) $inventory->quantity - $requiredQuantity,
                 ]);
             }
 
@@ -120,21 +155,35 @@ class SaleService
                 'status' => 'confirmed',
             ]);
 
+            AppCache::clearDashboard();
+
             return $sale->refresh()->load(['customer', 'items.product']);
         });
     }
 
     public function cancelSale(Sale $sale): Sale
     {
-        if ($sale->status !== 'draft') {
-            throw new InvalidArgumentException('Only draft sale can be cancelled.');
-        }
+        return DB::transaction(function () use ($sale): Sale {
+            /*
+             * Lock sale row to avoid race conditions with confirm/cancel requests.
+             */
+            $sale = Sale::query()
+                ->whereKey($sale->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $sale->update([
-            'status' => 'cancelled',
-        ]);
+            if ($sale->status !== 'draft') {
+                throw new InvalidArgumentException('Only draft sale can be cancelled.');
+            }
 
-        return $sale->refresh()->load(['customer', 'items.product']);
+            $sale->update([
+                'status' => 'cancelled',
+            ]);
+
+            AppCache::clearDashboard();
+
+            return $sale->refresh()->load(['customer', 'items.product']);
+        });
     }
 
     public function formatSale(Sale $sale, bool $withItems = false): array
@@ -149,6 +198,11 @@ class SaleService
             ] : null,
             'sale_date' => $sale->sale_date?->format('Y-m-d'),
             'status' => $sale->status,
+
+            // Useful for distinguishing normal sales and POS sales.
+            'sale_channel' => $sale->sale_channel,
+            'payment_method' => $sale->payment_method,
+
             'total_amount' => number_format((float) $sale->total_amount, 2, '.', ''),
             'note' => $sale->note,
             'created_at' => $sale->created_at?->format('Y-m-d H:i:s'),

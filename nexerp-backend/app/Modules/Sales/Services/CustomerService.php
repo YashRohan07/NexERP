@@ -5,6 +5,7 @@ namespace App\Modules\Sales\Services;
 use App\Models\Customer;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use InvalidArgumentException;
 
 class CustomerService
 {
@@ -52,6 +53,14 @@ class CustomerService
 
     public function deleteCustomer(Customer $customer): void
     {
+        /*
+         * Customer should not be deleted if sales history exists.
+         * This prevents database constraint errors and protects business history.
+         */
+        if ($customer->sales()->exists()) {
+            throw new InvalidArgumentException('Customer cannot be deleted because sales records exist.');
+        }
+
         $customer->delete();
     }
 

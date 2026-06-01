@@ -10,7 +10,13 @@ return new class extends Migration
     {
         Schema::create('purchases', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('supplier_id')->constrained()->cascadeOnDelete();
+
+            /*
+             * Do not cascade delete purchases when a supplier is deleted.
+             * Purchase history should remain protected in an ERP system.
+             */
+            $table->foreignId('supplier_id')->constrained()->restrictOnDelete();
+
             $table->date('purchase_date');
             $table->string('status')->default('draft');
             $table->decimal('total_amount', 12, 2)->default(0);
@@ -19,6 +25,7 @@ return new class extends Migration
 
             $table->index('status');
             $table->index('purchase_date');
+            $table->index('supplier_id');
         });
     }
 

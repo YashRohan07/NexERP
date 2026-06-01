@@ -27,6 +27,11 @@ class PurchaseItem extends Model
 
     public function product(): BelongsTo
     {
-        return $this->belongsTo(Product::class);
+        /*
+         * Product uses soft deletes.
+         * withTrashed keeps historical purchase item details visible
+         * even if the product is later soft deleted.
+         */
+        return $this->belongsTo(Product::class)->withTrashed();
     }
 }

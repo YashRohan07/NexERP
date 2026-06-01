@@ -3,6 +3,7 @@
 namespace App\Modules\Product\Services;
 
 use App\Models\Product;
+use App\Support\AppCache;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +19,11 @@ class ProductService
         }
 
         return Product::query()
-            ->with('inventory')
+            /*
+             * Select only required inventory columns instead of loading all columns.
+             * This keeps product list API lighter.
+             */
+            ->with('inventory:id,product_id,quantity,purchase_price,purchase_date,low_stock_threshold')
             ->when($filters['search'] ?? null, function (Builder $query, string $search): void {
                 $query->where(function (Builder $query) use ($search): void {
                     $query->where('sku', 'like', "%{$search}%")
@@ -45,6 +50,10 @@ class ProductService
                 'color' => $data['color'] ?? null,
             ]);
 
+            /*
+             * Initial inventory is created only when product is first created.
+             * Later stock changes should happen through Inventory/Purchase/Sales/POS.
+             */
             $product->inventory()->create([
                 'quantity' => $data['quantity'],
                 'purchase_price' => $data['purchase_price'],
@@ -52,13 +61,16 @@ class ProductService
                 'low_stock_threshold' => $data['low_stock_threshold'],
             ]);
 
+            AppCache::clearDashboard();
+
             return $product->load('inventory');
         });
     }
 
     public function getProduct(int $id): Product
     {
-        return Product::with('inventory')->findOrFail($id);
+        return Product::with('inventory:id,product_id,quantity,purchase_price,purchase_date,low_stock_threshold')
+            ->findOrFail($id);
     }
 
     public function updateProduct(int $id, array $data): Product
@@ -73,15 +85,25 @@ class ProductService
                 'color' => $data['color'] ?? null,
             ]);
 
-            $product->inventory()->updateOrCreate(
-                ['product_id' => $product->id],
-                [
-                    'quantity' => $data['quantity'],
-                    'purchase_price' => $data['purchase_price'],
-                    'purchase_date' => $data['purchase_date'] ?? null,
+            /*
+             * Product edit should not overwrite quantity, purchase_price, or purchase_date.
+             * Existing inventory: only low_stock_threshold is updated.
+             * Missing inventory fallback: create a safe zero-stock record.
+             */
+            if ($product->inventory) {
+                $product->inventory->update([
                     'low_stock_threshold' => $data['low_stock_threshold'],
-                ]
-            );
+                ]);
+            } else {
+                $product->inventory()->create([
+                    'quantity' => 0,
+                    'purchase_price' => 0,
+                    'purchase_date' => null,
+                    'low_stock_threshold' => $data['low_stock_threshold'],
+                ]);
+            }
+
+            AppCache::clearDashboard();
 
             return $product->load('inventory');
         });
@@ -91,7 +113,13 @@ class ProductService
     {
         $product = Product::findOrFail($id);
 
+        /*
+         * Product uses soft deletes.
+         * Historical purchase/sale items remain safe because the product row is not hard deleted.
+         */
         $product->delete();
+
+        AppCache::clearDashboard();
     }
 
     public function formatProduct(Product $product): array

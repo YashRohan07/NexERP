@@ -10,6 +10,7 @@ use App\Modules\Sales\Services\CustomerService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use InvalidArgumentException;
 
 class CustomerController extends Controller
 {
@@ -62,8 +63,12 @@ class CustomerController extends Controller
 
     public function destroy(Customer $customer): JsonResponse
     {
-        $this->customerService->deleteCustomer($customer);
+        try {
+            $this->customerService->deleteCustomer($customer);
 
-        return ApiResponse::success('Customer deleted successfully');
+            return ApiResponse::success('Customer deleted successfully');
+        } catch (InvalidArgumentException $exception) {
+            return ApiResponse::error($exception->getMessage(), null, 422);
+        }
     }
 }

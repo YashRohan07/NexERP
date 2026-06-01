@@ -56,14 +56,16 @@ function DashboardPage() {
 
   return (
     <div className="w-full min-w-0 space-y-6">
-      <section className="w-full min-w-0 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm md:p-7">
-        <div className="flex min-w-0 flex-col justify-between gap-4 lg:flex-row lg:items-center">
+      <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm md:p-6">
+        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
           <div className="min-w-0">
             <p className="text-sm font-bold uppercase tracking-wide text-blue-600">
               Business Overview
             </p>
 
-            <h1 className="mt-3 text-3xl font-bold text-gray-950">Dashboard</h1>
+            <h1 className="mt-3 text-3xl font-bold tracking-tight text-gray-950">
+              Dashboard
+            </h1>
 
             <p className="mt-2 max-w-3xl text-sm text-gray-600">
               Quick overview of products, inventory value, stock alerts,
@@ -74,7 +76,7 @@ function DashboardPage() {
           <button
             type="button"
             onClick={fetchDashboard}
-            className="w-full shrink-0 rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 sm:w-auto"
+            className="w-full rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm shadow-blue-50 transition hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-200 sm:w-auto"
           >
             Refresh Dashboard
           </button>
@@ -82,22 +84,27 @@ function DashboardPage() {
       </section>
 
       {error && (
-        <div className="w-full min-w-0 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           {error}
         </div>
       )}
 
-      <section className="w-full min-w-0">
+      <section className="min-w-0">
         <SummaryCards summary={dashboard.summary} />
       </section>
 
-      <section className="w-full min-w-0">
+      <section className="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
         <LowStockTable products={dashboard.low_stock_products} />
       </section>
 
-      <section className="grid w-full min-w-0 gap-6">
-        <RecentPurchases purchases={dashboard.recent_purchases} />
-        <RecentSales sales={dashboard.recent_sales} />
+      <section className="grid min-w-0 gap-6">
+        <div className="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <RecentPurchases purchases={dashboard.recent_purchases} />
+        </div>
+
+        <div className="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <RecentSales sales={dashboard.recent_sales} />
+        </div>
       </section>
     </div>
   );

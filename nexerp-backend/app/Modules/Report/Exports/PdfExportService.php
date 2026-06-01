@@ -9,6 +9,8 @@ class PdfExportService
 {
     public function download(string $view, array $data, string $fileName): Response
     {
-        return Pdf::loadView($view, $data)->download($fileName);
+        return Pdf::loadView($view, $data)
+            ->setPaper('a4', 'landscape')
+            ->download($fileName);
     }
 }

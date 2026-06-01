@@ -122,6 +122,7 @@
                         <th>Status</th>
                         <th class="text-right">Unit Cost</th>
                         <th class="text-right">Total Value</th>
+                        <th>Purchase Date</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -134,6 +135,7 @@
                             <td>{{ $item['status'] }}</td>
                             <td class="text-right">{{ $item['unit_cost'] }}</td>
                             <td class="text-right">{{ $item['total_value'] }}</td>
+                            <td>{{ $item['purchase_date'] ?? '-' }}</td>
                         </tr>
                     @endforeach
                 </tbody>

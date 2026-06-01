@@ -20,26 +20,31 @@ export function getUser() {
   try {
     return JSON.parse(storedUser);
   } catch {
-    localStorage.removeItem(USER_KEY);
     return null;
   }
 }
 
-export function getRole() {
-  const user = getUser();
-
-  return String(user?.role || "").toLowerCase();
+export function clearAuth() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
 }
 
-export function isAdmin() {
-  return getRole() === "admin";
+export function logout() {
+  clearAuth();
 }
 
 export function isAuthenticated() {
   return Boolean(getToken());
 }
 
-export function logout() {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
+export function getRole() {
+  return getUser()?.role || "";
+}
+
+export function isAdmin() {
+  return String(getRole()).toLowerCase() === "admin";
+}
+
+export function isMember() {
+  return String(getRole()).toLowerCase() === "member";
 }

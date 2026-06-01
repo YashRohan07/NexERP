@@ -4,6 +4,7 @@ namespace App\Modules\Purchase\Services;
 
 use App\Models\Inventory;
 use App\Models\Purchase;
+use App\Support\AppCache;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -74,6 +75,8 @@ class PurchaseService
                 'total_amount' => $totalAmount,
             ]);
 
+            AppCache::clearDashboard();
+
             return $purchase->load(['supplier', 'items.product']);
         });
     }
@@ -136,6 +139,8 @@ class PurchaseService
                 'status' => 'confirmed',
             ]);
 
+            AppCache::clearDashboard();
+
             return $purchase->load(['supplier', 'items.product']);
         });
     }
@@ -158,6 +163,8 @@ class PurchaseService
             $purchase->update([
                 'status' => 'cancelled',
             ]);
+
+            AppCache::clearDashboard();
 
             return $purchase->load(['supplier', 'items.product']);
         });

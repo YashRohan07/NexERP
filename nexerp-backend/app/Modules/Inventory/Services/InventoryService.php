@@ -2,7 +2,9 @@
 
 namespace App\Modules\Inventory\Services;
 
+use App\Models\Inventory;
 use App\Models\Product;
+use App\Support\AppCache;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -89,14 +91,20 @@ class InventoryService
     public function adjustStock(Product $product, array $data): array
     {
         return DB::transaction(function () use ($product, $data): array {
-            $product->load('inventory');
+            /*
+             * Lock the inventory row before changing quantity.
+             * This prevents race conditions if two stock adjustments happen at the same time.
+             */
+            $inventory = Inventory::query()
+                ->where('product_id', $product->id)
+                ->lockForUpdate()
+                ->first();
 
-            if (! $product->inventory) {
+            if (! $inventory) {
                 throw new InvalidArgumentException('Inventory record not found for this product.');
             }
 
-            $inventory = $product->inventory;
-            $previousQuantity = $inventory->quantity;
+            $previousQuantity = (int) $inventory->quantity;
             $adjustmentType = $data['adjustment_type'];
             $quantity = (int) $data['quantity'];
 
@@ -117,6 +125,8 @@ class InventoryService
             $inventory->update([
                 'quantity' => $newQuantity,
             ]);
+
+            AppCache::clearDashboard();
 
             return [
                 'product_id' => $product->id,
@@ -145,7 +155,7 @@ class InventoryService
             'purchase_price' => number_format((float) $purchasePrice, 2, '.', ''),
             'total_value' => number_format($quantity * (float) $purchasePrice, 2, '.', ''),
             'low_stock_threshold' => $lowStockThreshold,
-            'status' => $this->getStockStatus($quantity, $lowStockThreshold),
+            'status' => $this->getStockStatus((int) $quantity, (int) $lowStockThreshold),
             'purchase_date' => $inventory?->purchase_date?->format('Y-m-d'),
         ];
     }

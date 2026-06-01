@@ -4,9 +4,11 @@ namespace App\Modules\Report\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Report\Exports\PdfExportService;
+use App\Modules\Report\Requests\PurchaseReportFilterRequest;
+use App\Modules\Report\Requests\ReportDateFilterRequest;
+use App\Modules\Report\Requests\SalesReportFilterRequest;
 use App\Modules\Report\Services\ReportService;
 use App\Support\ApiResponse;
-use Illuminate\Http\Request;
 
 class ReportController extends Controller
 {
@@ -24,50 +26,41 @@ class ReportController extends Controller
         );
     }
 
-    public function inventory(Request $request)
+    public function inventory(ReportDateFilterRequest $request)
     {
-        $filters = $this->validateDateFilters($request);
-
         return ApiResponse::success(
             'Inventory report fetched successfully',
-            $this->reportService->getInventoryReport($filters)
+            $this->reportService->getInventoryReport($request->validated())
         );
     }
 
-    public function lowStock(Request $request)
+    public function lowStock(ReportDateFilterRequest $request)
     {
-        $filters = $this->validateDateFilters($request);
-
         return ApiResponse::success(
             'Low stock report fetched successfully',
-            $this->reportService->getLowStockReport($filters)
+            $this->reportService->getLowStockReport($request->validated())
         );
     }
 
-    public function purchases(Request $request)
+    public function purchases(PurchaseReportFilterRequest $request)
     {
-        $filters = $this->validateDateFilters($request);
-
         return ApiResponse::success(
             'Purchase report fetched successfully',
-            $this->reportService->getPurchaseReport($filters)
+            $this->reportService->getPurchaseReport($request->validated())
         );
     }
 
-    public function sales(Request $request)
+    public function sales(SalesReportFilterRequest $request)
     {
-        $filters = $this->validateSalesFilters($request);
-
         return ApiResponse::success(
             'Sales report fetched successfully',
-            $this->reportService->getSalesReport($filters)
+            $this->reportService->getSalesReport($request->validated())
         );
     }
 
-    public function inventoryPdf(Request $request)
+    public function inventoryPdf(ReportDateFilterRequest $request)
     {
-        $filters = $this->validateDateFilters($request);
-        $report = $this->reportService->getInventoryReport($filters);
+        $report = $this->reportService->getInventoryReport($request->validated());
 
         return $this->pdfExportService->download(
             'pdf.inventory-report',
@@ -82,10 +75,9 @@ class ReportController extends Controller
         );
     }
 
-    public function lowStockPdf(Request $request)
+    public function lowStockPdf(ReportDateFilterRequest $request)
     {
-        $filters = $this->validateDateFilters($request);
-        $report = $this->reportService->getLowStockReport($filters);
+        $report = $this->reportService->getLowStockReport($request->validated());
 
         return $this->pdfExportService->download(
             'pdf.low-stock-report',
@@ -100,10 +92,9 @@ class ReportController extends Controller
         );
     }
 
-    public function purchasesPdf(Request $request)
+    public function purchasesPdf(PurchaseReportFilterRequest $request)
     {
-        $filters = $this->validateDateFilters($request);
-        $report = $this->reportService->getPurchaseReport($filters);
+        $report = $this->reportService->getPurchaseReport($request->validated());
 
         return $this->pdfExportService->download(
             'pdf.purchase-report',
@@ -118,10 +109,9 @@ class ReportController extends Controller
         );
     }
 
-    public function salesPdf(Request $request)
+    public function salesPdf(SalesReportFilterRequest $request)
     {
-        $filters = $this->validateSalesFilters($request);
-        $report = $this->reportService->getSalesReport($filters);
+        $report = $this->reportService->getSalesReport($request->validated());
 
         return $this->pdfExportService->download(
             'pdf.sales-report',
@@ -134,22 +124,5 @@ class ReportController extends Controller
             ],
             'sales-report.pdf'
         );
-    }
-
-    private function validateDateFilters(Request $request): array
-    {
-        return $request->validate([
-            'date_from' => ['nullable', 'date'],
-            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
-        ]);
-    }
-
-    private function validateSalesFilters(Request $request): array
-    {
-        return $request->validate([
-            'date_from' => ['nullable', 'date'],
-            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
-            'sale_channel' => ['nullable', 'in:all,sales,pos'],
-        ]);
     }
 }

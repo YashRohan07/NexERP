@@ -6,32 +6,50 @@ use App\Models\Inventory;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\Sale;
+use Illuminate\Support\Facades\Cache;
 
 class DashboardService
 {
     public function getSummary(): array
     {
-        return [
-            'summary' => $this->getSummaryCards(),
-            'low_stock_products' => $this->getLowStockProducts(),
-            'recent_purchases' => $this->getRecentPurchases(),
-            'recent_sales' => $this->getRecentSales(),
-        ];
+        /*
+         * Short-lived cache improves dashboard performance without overengineering.
+         * The dashboard does not need second-by-second accuracy for this MVP.
+         *
+         * Measure before/after:
+         * GET /api/dashboard/summary
+         */
+        return Cache::remember('dashboard.summary', now()->addMinutes(2), function (): array {
+            return [
+                'summary' => $this->getSummaryCards(),
+                'low_stock_products' => $this->getLowStockProducts(),
+                'recent_purchases' => $this->getRecentPurchases(),
+                'recent_sales' => $this->getRecentSales(),
+            ];
+        });
     }
 
     private function getSummaryCards(): array
     {
-        $inventoryValue = Inventory::query()
+        $validInventoryQuery = Inventory::query()
+            ->whereHas('product');
+
+        $inventoryValue = (clone $validInventoryQuery)
             ->selectRaw('COALESCE(SUM(quantity * purchase_price), 0) as total')
             ->value('total');
 
         return [
             'total_products' => Product::query()->count(),
-            'total_quantity' => (int) Inventory::query()->sum('quantity'),
+
+            'total_quantity' => (int) (clone $validInventoryQuery)
+                ->sum('quantity'),
+
             'inventory_value' => number_format((float) $inventoryValue, 2, '.', ''),
-            'low_stock_count' => Inventory::query()
+
+            'low_stock_count' => (clone $validInventoryQuery)
                 ->whereColumn('quantity', '<=', 'low_stock_threshold')
                 ->count(),
+
             'total_purchases' => number_format(
                 (float) Purchase::query()
                     ->where('status', 'confirmed')
@@ -40,6 +58,7 @@ class DashboardService
                 '.',
                 ''
             ),
+
             'total_sales' => number_format(
                 (float) Sale::query()
                     ->where('status', 'confirmed')
@@ -55,6 +74,7 @@ class DashboardService
     {
         return Inventory::query()
             ->with('product:id,sku,name')
+            ->whereHas('product')
             ->whereColumn('quantity', '<=', 'low_stock_threshold')
             ->orderBy('quantity')
             ->limit(5)

@@ -10,6 +10,7 @@ use App\Modules\Purchase\Services\SupplierService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use InvalidArgumentException;
 
 class SupplierController extends Controller
 {
@@ -62,8 +63,12 @@ class SupplierController extends Controller
 
     public function destroy(Supplier $supplier): JsonResponse
     {
-        $this->supplierService->deleteSupplier($supplier);
+        try {
+            $this->supplierService->deleteSupplier($supplier);
 
-        return ApiResponse::success('Supplier deleted successfully');
+            return ApiResponse::success('Supplier deleted successfully');
+        } catch (InvalidArgumentException $exception) {
+            return ApiResponse::error($exception->getMessage(), null, 422);
+        }
     }
 }

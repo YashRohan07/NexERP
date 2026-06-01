@@ -5,6 +5,7 @@ namespace App\Modules\Purchase\Services;
 use App\Models\Supplier;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use InvalidArgumentException;
 
 class SupplierService
 {
@@ -57,6 +58,14 @@ class SupplierService
 
     public function deleteSupplier(Supplier $supplier): void
     {
+        /*
+         * Supplier should not be deleted if purchase history exists.
+         * This prevents database constraint errors and protects business history.
+         */
+        if ($supplier->purchases()->exists()) {
+            throw new InvalidArgumentException('Supplier cannot be deleted because purchase records exist.');
+        }
+
         $supplier->delete();
     }
 

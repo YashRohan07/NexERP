@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Modules\Auth\Requests;
+namespace App\Modules\Report\Requests;
 
 use App\Support\ApiResponse;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class LoginRequest extends FormRequest
+class SalesReportFilterRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -17,8 +17,13 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string'],
+            /*
+             * Sales report is transactional and can grow large.
+             * Requiring date range keeps report/PDF generation safer for MVP.
+             */
+            'date_from' => ['required', 'date'],
+            'date_to' => ['required', 'date', 'after_or_equal:date_from'],
+            'sale_channel' => ['nullable', 'in:all,sales,pos'],
         ];
     }
 

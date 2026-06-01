@@ -13,16 +13,18 @@ class ReportService
 {
     public function getSummary(): array
     {
-        $inventoryValue = Inventory::query()
+        $inventoryQuery = Inventory::query()->whereHas('product');
+
+        $inventoryValue = (clone $inventoryQuery)
             ->selectRaw('COALESCE(SUM(quantity * purchase_price), 0) as total')
             ->value('total');
 
         return [
             'summary' => [
                 'total_products' => Product::query()->count(),
-                'total_quantity' => (int) Inventory::query()->sum('quantity'),
+                'total_quantity' => (int) (clone $inventoryQuery)->sum('quantity'),
                 'total_inventory_value' => $this->formatMoney($inventoryValue),
-                'low_stock_count' => Inventory::query()
+                'low_stock_count' => (clone $inventoryQuery)
                     ->whereColumn('quantity', '<=', 'low_stock_threshold')
                     ->count(),
                 'total_confirmed_purchases' => Purchase::query()
@@ -49,6 +51,7 @@ class ReportService
     {
         $inventories = Inventory::query()
             ->with('product:id,sku,name')
+            ->whereHas('product')
             ->when(
                 ! empty($filters['date_from']),
                 fn (Builder $query) => $query->whereDate('purchase_date', '>=', $filters['date_from'])
@@ -60,12 +63,12 @@ class ReportService
             ->orderBy('id')
             ->get();
 
-        $items = $inventories->map(function (Inventory $inventory) {
+        $items = $inventories->map(function (Inventory $inventory): array {
             $totalValue = (float) $inventory->quantity * (float) $inventory->purchase_price;
 
             return [
-                'sku' => $inventory->product?->sku,
-                'product' => $inventory->product?->name,
+                'sku' => $inventory->product->sku,
+                'product' => $inventory->product->name,
                 'quantity' => (int) $inventory->quantity,
                 'unit_cost' => $this->formatMoney($inventory->purchase_price),
                 'total_value' => $this->formatMoney($totalValue),
@@ -86,6 +89,7 @@ class ReportService
     {
         $inventories = Inventory::query()
             ->with('product:id,sku,name')
+            ->whereHas('product')
             ->whereColumn('quantity', '<=', 'low_stock_threshold')
             ->when(
                 ! empty($filters['date_from']),
@@ -99,17 +103,18 @@ class ReportService
             ->orderBy('id')
             ->get();
 
-        $items = $inventories->map(function (Inventory $inventory) {
+        $items = $inventories->map(function (Inventory $inventory): array {
             $totalValue = (float) $inventory->quantity * (float) $inventory->purchase_price;
 
             return [
-                'sku' => $inventory->product?->sku,
-                'product' => $inventory->product?->name,
+                'sku' => $inventory->product->sku,
+                'product' => $inventory->product->name,
                 'quantity' => (int) $inventory->quantity,
                 'threshold' => (int) $inventory->low_stock_threshold,
                 'status' => $this->stockStatus($inventory),
                 'unit_cost' => $this->formatMoney($inventory->purchase_price),
                 'total_value' => $this->formatMoney($totalValue),
+                'purchase_date' => $inventory->purchase_date?->format('Y-m-d'),
             ];
         });
 
@@ -138,10 +143,10 @@ class ReportService
             ->latest('id')
             ->get();
 
-        $items = $purchases->map(function (Purchase $purchase) {
+        $items = $purchases->map(function (Purchase $purchase): array {
             return [
                 'id' => $purchase->id,
-                'supplier' => $purchase->supplier?->name,
+                'supplier' => $purchase->supplier?->name ?? '-',
                 'purchase_date' => $purchase->purchase_date?->format('Y-m-d'),
                 'status' => $purchase->status,
                 'total_amount' => $this->formatMoney($purchase->total_amount),
@@ -181,10 +186,10 @@ class ReportService
             ->latest('id')
             ->get();
 
-        $items = $sales->map(function (Sale $sale) {
+        $items = $sales->map(function (Sale $sale): array {
             return [
                 'id' => $sale->id,
-                'customer' => $sale->customer?->name,
+                'customer' => $sale->customer?->name ?? '-',
                 'sale_date' => $sale->sale_date?->format('Y-m-d'),
                 'sale_channel' => $sale->sale_channel,
                 'status' => $sale->status,
@@ -214,10 +219,12 @@ class ReportService
             'total_products' => $inventories->count(),
             'total_quantity' => (int) $inventories->sum('quantity'),
             'total_inventory_value' => $this->formatMoney(
-                $inventories->sum(fn (Inventory $inventory) => (float) $inventory->quantity * (float) $inventory->purchase_price)
+                $inventories->sum(
+                    fn (Inventory $inventory): float => (float) $inventory->quantity * (float) $inventory->purchase_price
+                )
             ),
             'low_stock_count' => $inventories
-                ->filter(fn (Inventory $inventory) => $inventory->quantity <= $inventory->low_stock_threshold)
+                ->filter(fn (Inventory $inventory): bool => $inventory->quantity <= $inventory->low_stock_threshold)
                 ->count(),
         ];
     }
@@ -227,10 +234,12 @@ class ReportService
         return [
             'low_stock_count' => $inventories->count(),
             'out_of_stock_count' => $inventories
-                ->filter(fn (Inventory $inventory) => $inventory->quantity <= 0)
+                ->filter(fn (Inventory $inventory): bool => $inventory->quantity <= 0)
                 ->count(),
             'low_stock_inventory_value' => $this->formatMoney(
-                $inventories->sum(fn (Inventory $inventory) => (float) $inventory->quantity * (float) $inventory->purchase_price)
+                $inventories->sum(
+                    fn (Inventory $inventory): float => (float) $inventory->quantity * (float) $inventory->purchase_price
+                )
             ),
         ];
     }

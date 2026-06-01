@@ -5,6 +5,7 @@ namespace App\Modules\Dashboard\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Dashboard\Services\DashboardService;
 use App\Support\ApiResponse;
+use Illuminate\Http\JsonResponse;
 
 class DashboardController extends Controller
 {
@@ -13,7 +14,7 @@ class DashboardController extends Controller
     ) {
     }
 
-    public function summary()
+    public function summary(): JsonResponse
     {
         return ApiResponse::success(
             'Dashboard summary fetched successfully',

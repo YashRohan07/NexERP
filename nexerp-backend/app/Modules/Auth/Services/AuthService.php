@@ -4,6 +4,7 @@ namespace App\Modules\Auth\Services;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthService
 {
@@ -15,6 +16,10 @@ class AuthService
             return null;
         }
 
+        /*
+         * Create a Sanctum personal access token for API authentication.
+         * The token name is only an internal label.
+         */
         $token = $user->createToken('nexerp-auth-token')->plainTextToken;
 
         return [
@@ -26,9 +31,14 @@ class AuthService
 
     public function logout(User $user): void
     {
+        /*
+         * currentAccessToken() returns the token used for the current request.
+         * The instanceof check helps static analyzers like Intelephense understand
+         * that delete() exists on Sanctum's PersonalAccessToken model.
+         */
         $currentToken = $user->currentAccessToken();
 
-        if ($currentToken) {
+        if ($currentToken instanceof PersonalAccessToken) {
             $currentToken->delete();
         }
     }

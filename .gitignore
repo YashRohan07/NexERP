@@ -1,7 +1,17 @@
 # Environment files
 .env
-.env.backup
-.env.production
+.env.*
+!*.env.example
+
+# Backend environment files
+nexerp-backend/.env
+nexerp-backend/.env.*
+!nexerp-backend/.env.example
+
+# Frontend environment files
+nexerp-frontend/.env
+nexerp-frontend/.env.*
+!nexerp-frontend/.env.example
 
 # Logs
 *.log
@@ -26,20 +36,37 @@ Thumbs.db
 auth.json
 
 # Dependencies
-nexerp-backend/vendor
-nexerp-frontend/node_modules
+nexerp-backend/vendor/
+nexerp-frontend/node_modules/
 
 # Build files
-nexerp-backend/public/build
+nexerp-backend/public/build/
 nexerp-backend/public/hot
-nexerp-backend/public/storage
+nexerp-backend/public/storage/
+nexerp-frontend/dist/
 
-# Storage keys
+# Storage keys / local runtime files
 nexerp-backend/storage/*.key
 nexerp-backend/storage/pail
+nexerp-backend/storage/framework/cache/*
+nexerp-backend/storage/framework/sessions/*
+nexerp-backend/storage/framework/testing/*
+nexerp-backend/storage/framework/views/*
+nexerp-backend/storage/logs/*
+
+# Keep Laravel storage placeholder files
+!nexerp-backend/storage/framework/cache/.gitignore
+!nexerp-backend/storage/framework/sessions/.gitignore
+!nexerp-backend/storage/framework/testing/.gitignore
+!nexerp-backend/storage/framework/views/.gitignore
+!nexerp-backend/storage/logs/.gitignore
 
 # Laragon / local database
 nexerp-backend/database/database.sqlite
+
+# Accidental local files/folders
+nexerp-backend/origin)
+nexerp-backend/mkdir/
 
 # Homestead
 Homestead.json
