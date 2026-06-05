@@ -17,12 +17,8 @@ class SalesReportFilterRequest extends FormRequest
     public function rules(): array
     {
         return [
-            /*
-             * Sales report is transactional and can grow large.
-             * Requiring date range keeps report/PDF generation safer for MVP.
-             */
-            'date_from' => ['required', 'date'],
-            'date_to' => ['required', 'date', 'after_or_equal:date_from'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
             'sale_channel' => ['nullable', 'in:all,sales,pos'],
         ];
     }

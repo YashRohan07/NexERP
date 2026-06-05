@@ -8,7 +8,7 @@ const pageMeta = {
   },
   "/products": {
     title: "Products",
-    subtitle: "Manage product catalog",
+    subtitle: "Manage product records",
   },
   "/inventory": {
     title: "Inventory",
@@ -94,33 +94,33 @@ function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/90 backdrop-blur">
-      <div className="flex min-h-[72px] items-center justify-between gap-4 px-4 md:px-6">
+    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
+      <div className="flex min-h-[68px] items-center justify-between gap-4 px-4 md:px-6">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
             {pageInfo.title}
           </p>
 
-          <p className="mt-0.5 hidden text-xs font-medium text-gray-400 sm:block">
+          <p className="mt-0.5 hidden text-xs font-medium text-slate-400 sm:block">
             {pageInfo.subtitle}
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-2.5 py-1.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white shadow-sm">
+          <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-2.5 py-1.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-xs font-black text-white shadow-sm">
               {initials}
             </div>
 
             <div className="hidden sm:block">
-              <p className="text-sm font-bold text-gray-950">{displayRole}</p>
+              <p className="text-sm font-bold text-slate-950">{displayRole}</p>
             </div>
           </div>
 
           <button
             type="button"
             onClick={handleLogout}
-            className="rounded-xl border border-blue-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 shadow-sm shadow-blue-50 transition hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-200"
+            className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-100"
           >
             Logout
           </button>

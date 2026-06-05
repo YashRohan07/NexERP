@@ -6,6 +6,7 @@ import {
   updateProduct,
 } from "../../api/productApi";
 import Button from "../../components/common/Button";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
 import Input from "../../components/common/Input";
 import Loader from "../../components/common/Loader";
 import Modal from "../../components/common/Modal";
@@ -37,6 +38,13 @@ function getErrorMessage(error) {
   );
 }
 
+function formatMoney(value) {
+  return Number(value || 0).toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+}
+
 function ProductPage() {
   const isAdmin = getRole() === "admin";
 
@@ -58,6 +66,9 @@ function ProductPage() {
   const [form, setForm] = useState(emptyForm);
   const [editingProduct, setEditingProduct] = useState(null);
   const [showFormModal, setShowFormModal] = useState(false);
+
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -120,14 +131,12 @@ function ProductPage() {
   }
 
   function resetFilters() {
-    const nextFilters = {
+    setFilters({
       search: "",
       size: "",
       color: "",
       per_page: 10,
-    };
-
-    setFilters(nextFilters);
+    });
 
     setTimeout(() => {
       fetchProducts(1);
@@ -203,54 +212,87 @@ function ProductPage() {
     }
   }
 
-  async function handleDelete(product) {
-    const confirmed = window.confirm(
-      `Delete product "${product.name}"? This action cannot be undone.`,
-    );
+  function openDeleteDialog(product) {
+    setError("");
+    setDeleteTarget(product);
+  }
 
-    if (!confirmed) return;
+  function closeDeleteDialog() {
+    if (deleteLoading) return;
+    setDeleteTarget(null);
+  }
 
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return;
+
+    setDeleteLoading(true);
     setError("");
 
     try {
-      await deleteProduct(product.id);
-      fetchProducts(pagination.current_page);
+      await deleteProduct(deleteTarget.id);
+
+      const nextPage =
+        products.length === 1 && pagination.current_page > 1
+          ? pagination.current_page - 1
+          : pagination.current_page;
+
+      setDeleteTarget(null);
+      fetchProducts(nextPage);
     } catch (err) {
       setError(getErrorMessage(err));
+    } finally {
+      setDeleteLoading(false);
     }
   }
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">
+    <div className="w-full min-w-0 space-y-5">
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70 md:p-6">
+        <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-blue-600">
               Product Management
             </p>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-gray-950 md:text-3xl">
+
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
               Products
             </h1>
-            <p className="mt-2 text-sm text-gray-600">
-              Manage product master data and initial inventory setup.
+
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+              Manage product records, product attributes, and initial inventory
+              setup.
             </p>
           </div>
 
-          {isAdmin && <Button onClick={openCreateModal}>Add Product</Button>}
+          {isAdmin && (
+            <Button
+              onClick={openCreateModal}
+              className="inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-bold shadow-md shadow-blue-100 sm:w-auto"
+            >
+              + Add Product
+            </Button>
+          )}
         </div>
       </section>
 
-      <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70">
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-slate-950">Filters</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Search and narrow product records by SKU, name, size, or color.
+          </p>
+        </div>
+
         <form
           onSubmit={handleSearchSubmit}
-          className="grid gap-4 md:grid-cols-5"
+          className="grid gap-4 lg:grid-cols-[1.2fr_1fr_1fr_0.8fr_auto]"
         >
           <Input
             label="Search"
             name="search"
             value={filters.search}
             onChange={handleFilterChange}
-            placeholder="SKU or name"
+            placeholder="Search by SKU or product name"
           />
 
           <Input
@@ -279,13 +321,17 @@ function ProductPage() {
           />
 
           <div className="flex items-end gap-2">
-            <Button type="submit" className="w-full">
+            <Button
+              type="submit"
+              className="h-[42px] min-w-24 rounded-xl font-bold"
+            >
               Filter
             </Button>
+
             <Button
               type="button"
               variant="outline"
-              className="w-full"
+              className="h-[42px] min-w-24 rounded-xl font-bold"
               onClick={resetFilters}
             >
               Reset
@@ -295,7 +341,7 @@ function ProductPage() {
       </section>
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           {error}
         </div>
       )}
@@ -304,34 +350,40 @@ function ProductPage() {
         <Loader text="Loading products..." />
       ) : (
         <>
-          <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm shadow-slate-200/70">
+            <div className="flex flex-col gap-2 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-gray-950">
+                <h2 className="text-lg font-bold text-slate-950">
                   Product List
                 </h2>
-                <p className="mt-1 text-sm text-gray-500">
+
+                <p className="mt-1 text-sm text-slate-500">
                   {pagination.total} product{pagination.total === 1 ? "" : "s"}{" "}
                   found.
                 </p>
               </div>
+
+              <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                {pagination.total} record{pagination.total === 1 ? "" : "s"}
+              </span>
             </div>
 
             {products.length === 0 ? (
-              <div className="px-5 py-8">
-                <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-5 py-6 text-center">
-                  <p className="text-sm font-medium text-gray-700">
-                    No products found.
+              <div className="px-5 py-7">
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-6 text-center">
+                  <p className="text-sm font-semibold text-slate-700">
+                    No products available
                   </p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Try changing filters or add a new product.
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    Create your first product or adjust the current filters.
                   </p>
                 </div>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[950px] text-left text-sm">
-                  <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                     <tr>
                       <th className="px-5 py-3">SKU</th>
                       <th className="px-5 py-3">Name</th>
@@ -346,45 +398,55 @@ function ProductPage() {
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-slate-100">
                     {products.map((product) => (
-                      <tr key={product.id} className="hover:bg-gray-50">
-                        <td className="px-5 py-4 font-semibold text-gray-950">
+                      <tr
+                        key={product.id}
+                        className="transition hover:bg-slate-50"
+                      >
+                        <td className="px-5 py-4 font-semibold text-slate-950">
                           {product.sku}
                         </td>
-                        <td className="px-5 py-4 text-gray-700">
+
+                        <td className="px-5 py-4 font-medium text-slate-700">
                           {product.name}
                         </td>
-                        <td className="px-5 py-4 text-gray-700">
+
+                        <td className="px-5 py-4 text-slate-700">
                           {product.size || "-"}
                         </td>
-                        <td className="px-5 py-4 text-gray-700">
+
+                        <td className="px-5 py-4 text-slate-700">
                           {product.color || "-"}
                         </td>
-                        <td className="px-5 py-4 text-right font-medium text-gray-800">
+
+                        <td className="px-5 py-4 text-right font-semibold text-slate-800">
                           {product.stock ?? product.inventory?.quantity ?? 0}
                         </td>
-                        <td className="px-5 py-4 text-right text-gray-700">
-                          ৳
-                          {Number(
-                            product.inventory?.purchase_price || 0,
-                          ).toLocaleString()}
+
+                        <td className="px-5 py-4 text-right font-medium text-slate-700">
+                          ৳{formatMoney(product.inventory?.purchase_price)}
                         </td>
-                        <td className="px-5 py-4 text-gray-700">
+
+                        <td className="px-5 py-4 text-slate-700">
                           {product.inventory?.purchase_date || "-"}
                         </td>
+
                         {isAdmin && (
                           <td className="px-5 py-4">
                             <div className="flex justify-end gap-2">
                               <Button
                                 variant="outline"
+                                className="rounded-xl font-bold"
                                 onClick={() => openEditModal(product)}
                               >
                                 Edit
                               </Button>
+
                               <Button
                                 variant="danger"
-                                onClick={() => handleDelete(product)}
+                                className="rounded-xl font-bold"
+                                onClick={() => openDeleteDialog(product)}
                               >
                                 Delete
                               </Button>
@@ -399,7 +461,9 @@ function ProductPage() {
             )}
           </section>
 
-          <Pagination pagination={pagination} onPageChange={fetchProducts} />
+          {pagination.total > 0 && (
+            <Pagination pagination={pagination} onPageChange={fetchProducts} />
+          )}
         </>
       )}
 
@@ -409,7 +473,7 @@ function ProductPage() {
           onClose={() => setShowFormModal(false)}
         >
           {formError && (
-            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
               {formError}
             </div>
           )}
@@ -488,12 +552,17 @@ function ProductPage() {
               <Button
                 type="button"
                 variant="outline"
+                className="rounded-xl font-bold"
                 onClick={() => setShowFormModal(false)}
               >
                 Cancel
               </Button>
 
-              <Button type="submit" disabled={saving}>
+              <Button
+                type="submit"
+                disabled={saving}
+                className="rounded-xl font-bold"
+              >
                 {saving
                   ? "Saving..."
                   : editingProduct
@@ -504,6 +573,20 @@ function ProductPage() {
           </form>
         </Modal>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Delete Product"
+        message={`Are you sure you want to delete "${
+          deleteTarget?.name || "this product"
+        }"? This action cannot be undone.`}
+        confirmText="Delete Product"
+        cancelText="Keep Product"
+        variant="danger"
+        loading={deleteLoading}
+        onConfirm={handleConfirmDelete}
+        onCancel={closeDeleteDialog}
+      />
     </div>
   );
 }

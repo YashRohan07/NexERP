@@ -6,6 +6,7 @@ import {
   updateCustomer,
 } from "../../api/customerApi";
 import Button from "../../components/common/Button";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
 import Input from "../../components/common/Input";
 import Loader from "../../components/common/Loader";
 import Modal from "../../components/common/Modal";
@@ -53,47 +54,16 @@ function CustomerPage() {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [showFormModal, setShowFormModal] = useState(false);
 
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [formError, setFormError] = useState("");
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function loadCustomers() {
-      try {
-        const response = await getCustomers({ page: 1, per_page: 10 });
-        const data = response.data?.data || {};
-
-        if (isMounted) {
-          setCustomers(data.customers || []);
-          setPagination(
-            data.pagination || {
-              current_page: 1,
-              per_page: 10,
-              total: 0,
-              last_page: 1,
-            },
-          );
-          setError("");
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError(getErrorMessage(err));
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadCustomers();
-
-    return () => {
-      isMounted = false;
-    };
+    fetchCustomers(1);
   }, []);
 
   function buildParams(page = 1) {
@@ -217,54 +187,86 @@ function CustomerPage() {
     }
   }
 
-  async function handleDelete(customer) {
-    const confirmed = window.confirm(
-      `Delete customer "${customer.name}"? This action cannot be undone.`,
-    );
+  function openDeleteDialog(customer) {
+    setError("");
+    setDeleteTarget(customer);
+  }
 
-    if (!confirmed) return;
+  function closeDeleteDialog() {
+    if (deleteLoading) return;
+    setDeleteTarget(null);
+  }
 
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return;
+
+    setDeleteLoading(true);
     setError("");
 
     try {
-      await deleteCustomer(customer.id);
-      fetchCustomers(pagination.current_page);
+      await deleteCustomer(deleteTarget.id);
+
+      const nextPage =
+        customers.length === 1 && pagination.current_page > 1
+          ? pagination.current_page - 1
+          : pagination.current_page;
+
+      setDeleteTarget(null);
+      fetchCustomers(nextPage);
     } catch (err) {
       setError(getErrorMessage(err));
+    } finally {
+      setDeleteLoading(false);
     }
   }
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">
+    <div className="w-full min-w-0 space-y-5">
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70 md:p-6">
+        <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-blue-600">
               Customer Management
             </p>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-gray-950 md:text-3xl">
+
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
               Customers
             </h1>
-            <p className="mt-2 text-sm text-gray-600">
-              Manage retail and walk-in customer information used for sales.
+
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+              Manage retail and walk-in customer records for sales activity.
             </p>
           </div>
 
-          {isAdmin && <Button onClick={openCreateModal}>Add Customer</Button>}
+          {isAdmin && (
+            <Button
+              onClick={openCreateModal}
+              className="inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-bold shadow-md shadow-blue-100 sm:w-auto"
+            >
+              + Add Customer
+            </Button>
+          )}
         </div>
       </section>
 
-      <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70">
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-slate-950">Filters</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Search customer records by name, phone, or email.
+          </p>
+        </div>
+
         <form
           onSubmit={handleFilterSubmit}
-          className="grid gap-4 md:grid-cols-4"
+          className="grid gap-4 md:grid-cols-[1.5fr_0.8fr_auto]"
         >
           <Input
             label="Search"
             name="search"
             value={filters.search}
             onChange={handleFilterChange}
-            placeholder="Customer name, phone, email"
+            placeholder="Search by customer name, phone, or email"
           />
 
           <Input
@@ -276,14 +278,18 @@ function CustomerPage() {
             onChange={handleFilterChange}
           />
 
-          <div className="flex items-end gap-2 md:col-span-2">
-            <Button type="submit" className="w-full">
+          <div className="flex items-end gap-2">
+            <Button
+              type="submit"
+              className="h-[42px] min-w-24 rounded-xl font-bold"
+            >
               Filter
             </Button>
+
             <Button
               type="button"
               variant="outline"
-              className="w-full"
+              className="h-[42px] min-w-24 rounded-xl font-bold"
               onClick={resetFilters}
             >
               Reset
@@ -293,7 +299,7 @@ function CustomerPage() {
       </section>
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           {error}
         </div>
       )}
@@ -302,32 +308,40 @@ function CustomerPage() {
         <Loader text="Loading customers..." />
       ) : (
         <>
-          <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-            <div className="border-b border-gray-200 px-5 py-4">
-              <h2 className="text-lg font-semibold text-gray-950">
-                Customer List
-              </h2>
-              <p className="mt-1 text-sm text-gray-500">
-                {pagination.total} customer
-                {pagination.total === 1 ? "" : "s"} found.
-              </p>
+          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm shadow-slate-200/70">
+            <div className="flex flex-col gap-2 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-slate-950">
+                  Customer List
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  {pagination.total} customer
+                  {pagination.total === 1 ? "" : "s"} found.
+                </p>
+              </div>
+
+              <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                {pagination.total} record{pagination.total === 1 ? "" : "s"}
+              </span>
             </div>
 
             {customers.length === 0 ? (
-              <div className="px-5 py-8">
-                <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-5 py-6 text-center">
-                  <p className="text-sm font-medium text-gray-700">
-                    No customers found.
+              <div className="px-5 py-7">
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-6 text-center">
+                  <p className="text-sm font-semibold text-slate-700">
+                    No customers available
                   </p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Try changing filters or add a new customer.
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    Create your first customer or adjust the current filters.
                   </p>
                 </div>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[950px] text-left text-sm">
-                  <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                     <tr>
                       <th className="px-5 py-3">Name</th>
                       <th className="px-5 py-3">Phone</th>
@@ -339,33 +353,43 @@ function CustomerPage() {
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-slate-100">
                     {customers.map((customer) => (
-                      <tr key={customer.id} className="hover:bg-gray-50">
-                        <td className="px-5 py-4 font-semibold text-gray-950">
+                      <tr
+                        key={customer.id}
+                        className="transition hover:bg-slate-50"
+                      >
+                        <td className="px-5 py-4 font-semibold text-slate-950">
                           {customer.name}
                         </td>
-                        <td className="px-5 py-4 text-gray-700">
+
+                        <td className="px-5 py-4 text-slate-700">
                           {customer.phone || "-"}
                         </td>
-                        <td className="px-5 py-4 text-gray-700">
+
+                        <td className="px-5 py-4 text-slate-700">
                           {customer.email || "-"}
                         </td>
-                        <td className="px-5 py-4 text-gray-700">
+
+                        <td className="px-5 py-4 text-slate-700">
                           {customer.address || "-"}
                         </td>
+
                         {isAdmin && (
                           <td className="px-5 py-4">
                             <div className="flex justify-end gap-2">
                               <Button
                                 variant="outline"
+                                className="rounded-xl font-bold"
                                 onClick={() => openEditModal(customer)}
                               >
                                 Edit
                               </Button>
+
                               <Button
                                 variant="danger"
-                                onClick={() => handleDelete(customer)}
+                                className="rounded-xl font-bold"
+                                onClick={() => openDeleteDialog(customer)}
                               >
                                 Delete
                               </Button>
@@ -380,7 +404,9 @@ function CustomerPage() {
             )}
           </section>
 
-          <Pagination pagination={pagination} onPageChange={fetchCustomers} />
+          {pagination.total > 0 && (
+            <Pagination pagination={pagination} onPageChange={fetchCustomers} />
+          )}
         </>
       )}
 
@@ -390,7 +416,7 @@ function CustomerPage() {
           onClose={() => setShowFormModal(false)}
         >
           {formError && (
-            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
               {formError}
             </div>
           )}
@@ -430,12 +456,17 @@ function CustomerPage() {
               <Button
                 type="button"
                 variant="outline"
+                className="rounded-xl font-bold"
                 onClick={() => setShowFormModal(false)}
               >
                 Cancel
               </Button>
 
-              <Button type="submit" disabled={saving}>
+              <Button
+                type="submit"
+                disabled={saving}
+                className="rounded-xl font-bold"
+              >
                 {saving
                   ? "Saving..."
                   : editingCustomer
@@ -446,6 +477,20 @@ function CustomerPage() {
           </form>
         </Modal>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Delete Customer"
+        message={`Are you sure you want to delete "${
+          deleteTarget?.name || "this customer"
+        }"? This action cannot be undone.`}
+        confirmText="Delete Customer"
+        cancelText="Keep Customer"
+        variant="danger"
+        loading={deleteLoading}
+        onConfirm={handleConfirmDelete}
+        onCancel={closeDeleteDialog}
+      />
     </div>
   );
 }

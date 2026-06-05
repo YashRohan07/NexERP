@@ -37,7 +37,14 @@ function getStatusClass(status) {
     return "bg-red-50 text-red-700";
   }
 
-  return "bg-gray-100 text-gray-700";
+  return "bg-slate-100 text-slate-700";
+}
+
+function formatMoney(value) {
+  return Number(value || 0).toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
 }
 
 function InventoryPage() {
@@ -206,33 +213,43 @@ function InventoryPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">
-            Stock Monitoring
+    <div className="w-full min-w-0 space-y-5">
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70 md:p-6">
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-[0.22em] text-blue-600">
+            Stock Control
           </p>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight text-gray-950 md:text-3xl">
+
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
             Inventory
           </h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Monitor stock quantity, value, purchase cost, threshold, and product
-            status.
+
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+            Monitor stock levels, inventory value, purchase cost, thresholds,
+            and product status.
           </p>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70">
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-slate-950">Filters</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Search and narrow inventory records by product, stock status, date,
+            and sorting options.
+          </p>
+        </div>
+
         <form
           onSubmit={handleFilterSubmit}
-          className="grid gap-4 md:grid-cols-4 xl:grid-cols-8"
+          className="grid gap-4 md:grid-cols-2 xl:grid-cols-[1.5fr_1fr_1fr_1fr_1fr_1fr_0.8fr_auto]"
         >
           <Input
             label="Search"
             name="search"
             value={filters.search}
             onChange={handleFilterChange}
-            placeholder="SKU or name"
+            placeholder="SKU / product name"
           />
 
           <Select
@@ -295,13 +312,17 @@ function InventoryPage() {
           />
 
           <div className="flex items-end gap-2">
-            <Button type="submit" className="w-full">
+            <Button
+              type="submit"
+              className="h-[42px] min-w-24 rounded-xl font-bold"
+            >
               Filter
             </Button>
+
             <Button
               type="button"
               variant="outline"
-              className="w-full"
+              className="h-[42px] min-w-24 rounded-xl font-bold"
               onClick={resetFilters}
             >
               Reset
@@ -311,7 +332,7 @@ function InventoryPage() {
       </section>
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           {error}
         </div>
       )}
@@ -320,34 +341,41 @@ function InventoryPage() {
         <Loader text="Loading inventory..." />
       ) : (
         <>
-          <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm shadow-slate-200/70">
+            <div className="flex flex-col gap-2 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-gray-950">
+                <h2 className="text-lg font-bold text-slate-950">
                   Inventory List
                 </h2>
-                <p className="mt-1 text-sm text-gray-500">
+
+                <p className="mt-1 text-sm text-slate-500">
                   {pagination.total} inventory record
                   {pagination.total === 1 ? "" : "s"} found.
                 </p>
               </div>
+
+              <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                {pagination.total} record{pagination.total === 1 ? "" : "s"}
+              </span>
             </div>
 
             {inventory.length === 0 ? (
-              <div className="px-5 py-8">
-                <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-5 py-6 text-center">
-                  <p className="text-sm font-medium text-gray-700">
-                    No inventory records found.
+              <div className="px-5 py-7">
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-6 text-center">
+                  <p className="text-sm font-semibold text-slate-700">
+                    No inventory records available
                   </p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Try changing filters or add products first.
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    Create products with initial stock or adjust the current
+                    filters.
                   </p>
                 </div>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[1050px] text-left text-sm">
-                  <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                     <tr>
                       <th className="px-5 py-3">SKU</th>
                       <th className="px-5 py-3">Product</th>
@@ -363,41 +391,55 @@ function InventoryPage() {
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-slate-100">
                     {inventory.map((item) => (
-                      <tr key={item.product_id} className="hover:bg-gray-50">
-                        <td className="px-5 py-4 font-semibold text-gray-950">
+                      <tr
+                        key={item.product_id}
+                        className="transition hover:bg-slate-50"
+                      >
+                        <td className="px-5 py-4 font-semibold text-slate-950">
                           {item.sku}
                         </td>
-                        <td className="px-5 py-4 text-gray-700">{item.name}</td>
-                        <td className="px-5 py-4 text-right font-medium text-gray-800">
+
+                        <td className="px-5 py-4 font-medium text-slate-700">
+                          {item.name}
+                        </td>
+
+                        <td className="px-5 py-4 text-right font-semibold text-slate-800">
                           {item.quantity}
                         </td>
-                        <td className="px-5 py-4 text-right text-gray-700">
-                          ৳{Number(item.purchase_price || 0).toLocaleString()}
+
+                        <td className="px-5 py-4 text-right font-medium text-slate-700">
+                          ৳{formatMoney(item.purchase_price)}
                         </td>
-                        <td className="px-5 py-4 text-right font-medium text-gray-800">
-                          ৳{Number(item.total_value || 0).toLocaleString()}
+
+                        <td className="px-5 py-4 text-right font-semibold text-slate-800">
+                          ৳{formatMoney(item.total_value)}
                         </td>
-                        <td className="px-5 py-4 text-right text-gray-700">
+
+                        <td className="px-5 py-4 text-right text-slate-700">
                           {item.low_stock_threshold}
                         </td>
+
                         <td className="px-5 py-4">
                           <span
-                            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getStatusClass(
+                            className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${getStatusClass(
                               item.status,
                             )}`}
                           >
                             {item.status}
                           </span>
                         </td>
-                        <td className="px-5 py-4 text-gray-700">
+
+                        <td className="px-5 py-4 text-slate-700">
                           {item.purchase_date || "-"}
                         </td>
+
                         {isAdmin && (
                           <td className="px-5 py-4 text-right">
                             <Button
                               variant="outline"
+                              className="rounded-xl font-bold"
                               onClick={() => openAdjustModal(item)}
                             >
                               Adjust
@@ -412,7 +454,9 @@ function InventoryPage() {
             )}
           </section>
 
-          <Pagination pagination={pagination} onPageChange={fetchInventory} />
+          {pagination.total > 0 && (
+            <Pagination pagination={pagination} onPageChange={fetchInventory} />
+          )}
         </>
       )}
 
@@ -423,30 +467,39 @@ function InventoryPage() {
           width="max-w-xl"
         >
           {adjustError && (
-            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
               {adjustError}
             </div>
           )}
 
-          <div className="mb-5 rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm">
+          <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
             <div className="grid gap-3 sm:grid-cols-2">
               <p>
-                <span className="font-semibold text-gray-700">SKU:</span>{" "}
+                <span className="font-semibold text-slate-700">SKU:</span>{" "}
                 {selectedItem.sku}
               </p>
+
               <p>
-                <span className="font-semibold text-gray-700">
+                <span className="font-semibold text-slate-700">
                   Current Qty:
                 </span>{" "}
                 {selectedItem.quantity}
               </p>
+
               <p>
-                <span className="font-semibold text-gray-700">Threshold:</span>{" "}
+                <span className="font-semibold text-slate-700">Threshold:</span>{" "}
                 {selectedItem.low_stock_threshold}
               </p>
+
               <p>
-                <span className="font-semibold text-gray-700">Status:</span>{" "}
-                {selectedItem.status}
+                <span className="font-semibold text-slate-700">Status:</span>{" "}
+                <span
+                  className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold ${getStatusClass(
+                    selectedItem.status,
+                  )}`}
+                >
+                  {selectedItem.status}
+                </span>
               </p>
             </div>
           </div>
@@ -474,9 +527,12 @@ function InventoryPage() {
               required
             />
 
-            <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
-              <p className="text-sm text-blue-700">New Quantity Preview</p>
-              <p className="mt-1 text-2xl font-bold text-blue-900">
+            <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+              <p className="text-sm font-medium text-blue-700">
+                New Quantity Preview
+              </p>
+
+              <p className="mt-1 text-3xl font-bold text-blue-950">
                 {getNewQuantityPreview()}
               </p>
             </div>
@@ -485,12 +541,17 @@ function InventoryPage() {
               <Button
                 type="button"
                 variant="outline"
+                className="rounded-xl font-bold"
                 onClick={() => setShowAdjustModal(false)}
               >
                 Cancel
               </Button>
 
-              <Button type="submit" disabled={adjusting}>
+              <Button
+                type="submit"
+                disabled={adjusting}
+                className="rounded-xl font-bold"
+              >
                 {adjusting ? "Adjusting..." : "Update Stock"}
               </Button>
             </div>

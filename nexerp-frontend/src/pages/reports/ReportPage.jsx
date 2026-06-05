@@ -10,12 +10,24 @@ import {
   getReportSummary,
   getSalesReport,
 } from "../../api/reportApi";
-import Loader from "../../components/common/Loader";
 
 const initialFilters = {
   date_from: "",
   date_to: "",
   sale_channel: "all",
+};
+
+const emptyReport = {
+  summary: {},
+  items: [],
+};
+
+const initialLoadingState = {
+  summary: true,
+  sales: true,
+  purchases: true,
+  inventory: true,
+  lowStock: true,
 };
 
 function formatCurrency(value) {
@@ -39,7 +51,7 @@ function statusClass(status) {
   const normalized = String(status || "").toLowerCase();
 
   if (normalized.includes("confirmed") || normalized.includes("in stock")) {
-    return "bg-green-50 text-green-700";
+    return "bg-emerald-50 text-emerald-700";
   }
 
   if (normalized.includes("cancelled") || normalized.includes("canceled")) {
@@ -47,14 +59,14 @@ function statusClass(status) {
   }
 
   if (normalized.includes("draft")) {
-    return "bg-yellow-50 text-yellow-700";
+    return "bg-amber-50 text-amber-700";
   }
 
   if (normalized.includes("low")) {
     return "bg-orange-50 text-orange-700";
   }
 
-  return "bg-gray-100 text-gray-700";
+  return "bg-slate-100 text-slate-700";
 }
 
 function getErrorMessage(error) {
@@ -96,14 +108,56 @@ function downloadBlob(blob, filename) {
   window.URL.revokeObjectURL(url);
 }
 
-function SummaryCard({ label, value, helper, accent = "border-blue-500" }) {
+function SectionLoading() {
+  return (
+    <div className="px-5 py-7">
+      <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-6 text-center">
+        <p className="text-sm font-semibold text-slate-700">
+          Loading report data...
+        </p>
+
+        <p className="mt-1 text-xs text-slate-500">
+          This section will appear automatically.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function SummaryCard({
+  label,
+  value,
+  helper,
+  accent = "border-l-blue-500",
+  tag,
+  tagClass = "bg-blue-50 text-blue-700",
+  loading = false,
+}) {
   return (
     <div
-      className={`rounded-2xl border border-gray-200 border-l-4 ${accent} bg-white p-6 shadow-sm`}
+      className={`rounded-3xl border border-slate-200 border-l-4 ${accent} bg-white p-5 shadow-sm shadow-slate-200/70 transition hover:-translate-y-0.5 hover:shadow-md`}
     >
-      <p className="text-sm font-medium text-gray-500">{label}</p>
-      <p className="mt-3 text-2xl font-bold text-gray-950">{value}</p>
-      {helper && <p className="mt-3 text-sm text-gray-500">{helper}</p>}
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm font-semibold text-slate-500">{label}</p>
+
+        {tag && (
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-bold ${tagClass}`}
+          >
+            {tag}
+          </span>
+        )}
+      </div>
+
+      <p className="mt-4 text-2xl font-bold tracking-tight text-slate-950">
+        {loading ? "..." : value}
+      </p>
+
+      {helper && (
+        <p className="mt-4 text-xs font-medium text-slate-400">
+          {loading ? "Loading..." : helper}
+        </p>
+      )}
     </div>
   );
 }
@@ -115,42 +169,47 @@ function ReportSection({
   children,
   onDownload,
   downloading,
+  loading,
 }) {
+  const isExportDisabled = loading || downloading || count === 0;
+
   return (
-    <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-      <div className="flex flex-col justify-between gap-4 border-b border-gray-200 px-6 py-5 sm:flex-row sm:items-center">
+    <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm shadow-slate-200/70">
+      <div className="flex flex-col justify-between gap-4 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center">
         <div>
-          <h2 className="text-xl font-bold text-gray-950">{title}</h2>
-          <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
+          <h2 className="text-lg font-bold text-slate-950">{title}</h2>
+
+          <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
-            {count} items
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+            {loading ? "..." : count} item{count === 1 ? "" : "s"}
           </span>
 
           <button
             type="button"
             onClick={onDownload}
-            disabled={downloading}
-            className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isExportDisabled}
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {downloading ? "Downloading..." : "Export PDF"}
           </button>
         </div>
       </div>
 
-      {children}
+      {loading ? <SectionLoading /> : children}
     </section>
   );
 }
 
 function EmptyState({ message = "No report data found." }) {
   return (
-    <div className="px-6 py-8">
-      <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-6 py-8 text-center">
-        <p className="font-medium text-gray-700">{message}</p>
-        <p className="mt-1 text-sm text-gray-500">
+    <div className="px-5 py-7">
+      <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-6 text-center">
+        <p className="text-sm font-semibold text-slate-700">{message}</p>
+
+        <p className="mt-1 text-xs text-slate-500">
           Try changing the filters and refresh the report.
         </p>
       </div>
@@ -162,21 +221,12 @@ function ReportPage() {
   const [filters, setFilters] = useState(initialFilters);
 
   const [summaryReport, setSummaryReport] = useState({});
-  const [salesReport, setSalesReport] = useState({ summary: {}, items: [] });
-  const [purchaseReport, setPurchaseReport] = useState({
-    summary: {},
-    items: [],
-  });
-  const [inventoryReport, setInventoryReport] = useState({
-    summary: {},
-    items: [],
-  });
-  const [lowStockReport, setLowStockReport] = useState({
-    summary: {},
-    items: [],
-  });
+  const [salesReport, setSalesReport] = useState(emptyReport);
+  const [purchaseReport, setPurchaseReport] = useState(emptyReport);
+  const [inventoryReport, setInventoryReport] = useState(emptyReport);
+  const [lowStockReport, setLowStockReport] = useState(emptyReport);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(initialLoadingState);
   const [downloading, setDownloading] = useState("");
   const [error, setError] = useState("");
 
@@ -237,17 +287,23 @@ function ReportPage() {
     }));
   }
 
-  async function fetchReports(event) {
+  async function fetchReports(event, nextFilters = filters) {
     if (event) {
       event.preventDefault();
     }
 
-    setLoading(true);
     setError("");
+    setLoading({
+      summary: true,
+      sales: true,
+      purchases: true,
+      inventory: true,
+      lowStock: true,
+    });
 
     try {
-      const salesParams = buildParams(filters, "sales");
-      const commonParams = buildParams(filters);
+      const salesParams = buildParams(nextFilters, "sales");
+      const commonParams = buildParams(nextFilters);
 
       const [
         summaryResponse,
@@ -264,11 +320,9 @@ function ReportPage() {
       ]);
 
       if (summaryResponse.status === "fulfilled") {
-        setSummaryReport(
-          normalizeData(summaryResponse.value)?.summary ||
-            normalizeData(summaryResponse.value) ||
-            {},
-        );
+        const data = normalizeData(summaryResponse.value);
+
+        setSummaryReport(data?.summary || data || {});
       }
 
       if (salesResponse.status === "fulfilled") {
@@ -311,28 +365,35 @@ function ReportPage() {
         });
       }
 
-      const failedRequest = [
+      const failedRequests = [
         summaryResponse,
         salesResponse,
         purchasesResponse,
         inventoryResponse,
         lowStockResponse,
-      ].find((result) => result.status === "rejected");
+      ].filter((result) => result.status === "rejected");
 
-      if (failedRequest) {
+      if (failedRequests.length > 0) {
         setError(
-          "Some report sections could not be loaded. Available sections are shown below.",
+          "Some report data could not be loaded. Please refresh the reports.",
         );
       }
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
-      setLoading(false);
+      setLoading({
+        summary: false,
+        sales: false,
+        purchases: false,
+        inventory: false,
+        lowStock: false,
+      });
     }
   }
 
   function resetFilters() {
     setFilters(initialFilters);
+    fetchReports(null, initialFilters);
   }
 
   async function handlePdfDownload(type) {
@@ -376,80 +437,98 @@ function ReportPage() {
     }
   }
 
-  if (loading) {
-    return <Loader text="Loading reports..." />;
-  }
+  const isSummaryLoading =
+    loading.summary ||
+    loading.sales ||
+    loading.purchases ||
+    loading.inventory ||
+    loading.lowStock;
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-2xl border border-gray-200 bg-white p-7 shadow-sm">
+    <div className="w-full min-w-0 space-y-5">
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70 md:p-6">
         <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
-          <div>
-            <p className="text-sm font-bold uppercase tracking-wide text-blue-600">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-blue-600">
               Business Reports
             </p>
-            <h1 className="mt-2 text-3xl font-bold text-gray-950">Reports</h1>
-            <p className="mt-2 text-sm text-gray-600">
-              Analyze sales, purchases, inventory value, and low stock products.
+
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+              Reports
+            </h1>
+
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+              Analyze sales, purchases, inventory value, and low-stock products.
             </p>
           </div>
 
           <button
             type="button"
             onClick={fetchReports}
-            className="rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
+            className="w-full rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm shadow-blue-50 transition hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-200 sm:w-auto"
           >
             Refresh Reports
           </button>
         </div>
-      </div>
+      </section>
 
       {error && (
-        <div className="rounded-xl border border-yellow-200 bg-yellow-50 px-5 py-4 text-sm text-yellow-800">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-medium text-amber-800">
           {error}
         </div>
       )}
 
       <form
         onSubmit={fetchReports}
-        className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+        className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70"
       >
-        <div className="grid gap-4 md:grid-cols-5">
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-slate-950">Filters</h2>
+
+          <p className="mt-1 text-sm text-slate-500">
+            Filter report data by date range and sales channel.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_auto]">
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
+            <label className="mb-2 block text-sm font-medium text-slate-700">
               Date From
             </label>
+
             <input
               type="date"
               name="date_from"
               value={filters.date_from}
               onChange={handleFilterChange}
-              className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
+            <label className="mb-2 block text-sm font-medium text-slate-700">
               Date To
             </label>
+
             <input
               type="date"
               name="date_to"
               value={filters.date_to}
               onChange={handleFilterChange}
-              className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
+            <label className="mb-2 block text-sm font-medium text-slate-700">
               Sales Channel
             </label>
+
             <select
               name="sale_channel"
               value={filters.sale_channel}
               onChange={handleFilterChange}
-              className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             >
               <option value="all">All</option>
               <option value="sales">Sales</option>
@@ -457,20 +536,18 @@ function ReportPage() {
             </select>
           </div>
 
-          <div className="flex items-end">
+          <div className="flex items-end gap-2">
             <button
               type="submit"
-              className="w-full rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+              className="h-[46px] min-w-24 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white shadow-sm shadow-blue-100 transition hover:bg-blue-700"
             >
               Filter
             </button>
-          </div>
 
-          <div className="flex items-end">
             <button
               type="button"
               onClick={resetFilters}
-              className="w-full rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              className="h-[46px] min-w-24 rounded-xl border border-slate-300 bg-white px-5 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
             >
               Reset
             </button>
@@ -478,32 +555,47 @@ function ReportPage() {
         </div>
       </form>
 
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
           label="Total Sales"
           value={formatCurrency(totals.salesAmount)}
           helper={`${formatNumber(totals.totalSales)} confirmed sales`}
-          accent="border-green-500"
+          accent="border-l-emerald-500"
+          tag="Sales"
+          tagClass="bg-emerald-50 text-emerald-700"
+          loading={isSummaryLoading}
         />
+
         <SummaryCard
           label="Total Purchases"
           value={formatCurrency(totals.purchaseAmount)}
           helper={`${formatNumber(totals.totalPurchases)} confirmed purchases`}
-          accent="border-orange-500"
+          accent="border-l-amber-500"
+          tag="Purchase"
+          tagClass="bg-amber-50 text-amber-700"
+          loading={isSummaryLoading}
         />
+
         <SummaryCard
           label="Inventory Value"
           value={formatCurrency(totals.inventoryValue)}
           helper={`${formatNumber(totals.totalQuantity)} stock units`}
-          accent="border-blue-500"
+          accent="border-l-blue-500"
+          tag="Value"
+          tagClass="bg-blue-50 text-blue-700"
+          loading={isSummaryLoading}
         />
+
         <SummaryCard
           label="Low Stock Items"
           value={formatNumber(totals.lowStockCount)}
           helper={`${formatNumber(totals.totalProducts)} total products`}
-          accent="border-red-500"
+          accent="border-l-red-500"
+          tag="Alert"
+          tagClass="bg-red-50 text-red-700"
+          loading={isSummaryLoading}
         />
-      </div>
+      </section>
 
       <ReportSection
         title="Sales Report"
@@ -511,36 +603,46 @@ function ReportPage() {
         count={salesReport.items?.length || 0}
         onDownload={() => handlePdfDownload("sales")}
         downloading={downloading === "sales"}
+        loading={loading.sales}
       >
         {salesReport.items?.length ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-left">
-              <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+            <table className="w-full min-w-[900px] text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="px-6 py-4">Sale ID</th>
-                  <th className="px-6 py-4">Customer</th>
-                  <th className="px-6 py-4">Date</th>
-                  <th className="px-6 py-4">Channel</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Payment</th>
-                  <th className="px-6 py-4 text-right">Items</th>
-                  <th className="px-6 py-4 text-right">Total</th>
+                  <th className="px-5 py-3">Sale ID</th>
+                  <th className="px-5 py-3">Customer</th>
+                  <th className="px-5 py-3">Date</th>
+                  <th className="px-5 py-3">Channel</th>
+                  <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3">Payment</th>
+                  <th className="px-5 py-3 text-right">Items</th>
+                  <th className="px-5 py-3 text-right">Total</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 text-sm text-gray-800">
+
+              <tbody className="divide-y divide-slate-100">
                 {salesReport.items.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 font-bold text-gray-950">
+                  <tr key={item.id} className="transition hover:bg-slate-50">
+                    <td className="px-5 py-4 font-bold text-slate-950">
                       #{item.id}
                     </td>
-                    <td className="px-6 py-4">{item.customer || "-"}</td>
-                    <td className="px-6 py-4">{item.sale_date || "-"}</td>
-                    <td className="px-6 py-4">
-                      <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase text-blue-700">
+
+                    <td className="px-5 py-4 text-slate-700">
+                      {item.customer || "-"}
+                    </td>
+
+                    <td className="px-5 py-4 text-slate-700">
+                      {item.sale_date || "-"}
+                    </td>
+
+                    <td className="px-5 py-4">
+                      <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold uppercase text-blue-700">
                         {item.sale_channel || "-"}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+
+                    <td className="px-5 py-4">
                       <span
                         className={`rounded-full px-3 py-1 text-xs font-bold capitalize ${statusClass(
                           item.status,
@@ -549,13 +651,16 @@ function ReportPage() {
                         {item.status || "-"}
                       </span>
                     </td>
-                    <td className="px-6 py-4 capitalize">
+
+                    <td className="px-5 py-4 capitalize text-slate-700">
                       {item.payment_method || "-"}
                     </td>
-                    <td className="px-6 py-4 text-right">
+
+                    <td className="px-5 py-4 text-right text-slate-700">
                       {formatNumber(item.items_count)}
                     </td>
-                    <td className="px-6 py-4 text-right font-bold text-gray-950">
+
+                    <td className="px-5 py-4 text-right font-bold text-slate-950">
                       {formatCurrency(item.total_amount)}
                     </td>
                   </tr>
@@ -574,29 +679,38 @@ function ReportPage() {
         count={purchaseReport.items?.length || 0}
         onDownload={() => handlePdfDownload("purchases")}
         downloading={downloading === "purchases"}
+        loading={loading.purchases}
       >
         {purchaseReport.items?.length ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px] text-left">
-              <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+            <table className="w-full min-w-[800px] text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="px-6 py-4">Purchase ID</th>
-                  <th className="px-6 py-4">Supplier</th>
-                  <th className="px-6 py-4">Date</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-right">Items</th>
-                  <th className="px-6 py-4 text-right">Total</th>
+                  <th className="px-5 py-3">Purchase ID</th>
+                  <th className="px-5 py-3">Supplier</th>
+                  <th className="px-5 py-3">Date</th>
+                  <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3 text-right">Items</th>
+                  <th className="px-5 py-3 text-right">Total</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 text-sm text-gray-800">
+
+              <tbody className="divide-y divide-slate-100">
                 {purchaseReport.items.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 font-bold text-gray-950">
+                  <tr key={item.id} className="transition hover:bg-slate-50">
+                    <td className="px-5 py-4 font-bold text-slate-950">
                       #{item.id}
                     </td>
-                    <td className="px-6 py-4">{item.supplier || "-"}</td>
-                    <td className="px-6 py-4">{item.purchase_date || "-"}</td>
-                    <td className="px-6 py-4">
+
+                    <td className="px-5 py-4 text-slate-700">
+                      {item.supplier || "-"}
+                    </td>
+
+                    <td className="px-5 py-4 text-slate-700">
+                      {item.purchase_date || "-"}
+                    </td>
+
+                    <td className="px-5 py-4">
                       <span
                         className={`rounded-full px-3 py-1 text-xs font-bold capitalize ${statusClass(
                           item.status,
@@ -605,10 +719,12 @@ function ReportPage() {
                         {item.status || "-"}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
+
+                    <td className="px-5 py-4 text-right text-slate-700">
                       {formatNumber(item.items_count)}
                     </td>
-                    <td className="px-6 py-4 text-right font-bold text-gray-950">
+
+                    <td className="px-5 py-4 text-right font-bold text-slate-950">
                       {formatCurrency(item.total_amount)}
                     </td>
                   </tr>
@@ -627,45 +743,55 @@ function ReportPage() {
         count={inventoryReport.items?.length || 0}
         onDownload={() => handlePdfDownload("inventory")}
         downloading={downloading === "inventory"}
+        loading={loading.inventory}
       >
         {inventoryReport.items?.length ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[950px] text-left">
-              <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+            <table className="w-full min-w-[950px] text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="px-6 py-4">SKU</th>
-                  <th className="px-6 py-4">Product</th>
-                  <th className="px-6 py-4 text-right">Qty</th>
-                  <th className="px-6 py-4 text-right">Unit Cost</th>
-                  <th className="px-6 py-4 text-right">Total Value</th>
-                  <th className="px-6 py-4 text-right">Threshold</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Purchase Date</th>
+                  <th className="px-5 py-3">SKU</th>
+                  <th className="px-5 py-3">Product</th>
+                  <th className="px-5 py-3 text-right">Qty</th>
+                  <th className="px-5 py-3 text-right">Unit Cost</th>
+                  <th className="px-5 py-3 text-right">Total Value</th>
+                  <th className="px-5 py-3 text-right">Threshold</th>
+                  <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3">Purchase Date</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 text-sm text-gray-800">
+
+              <tbody className="divide-y divide-slate-100">
                 {inventoryReport.items.map((item, index) => (
                   <tr
                     key={`${item.sku || "inventory"}-${index}`}
-                    className="hover:bg-gray-50"
+                    className="transition hover:bg-slate-50"
                   >
-                    <td className="px-6 py-4 font-bold text-gray-950">
+                    <td className="px-5 py-4 font-bold text-slate-950">
                       {item.sku || "-"}
                     </td>
-                    <td className="px-6 py-4">{item.product || "-"}</td>
-                    <td className="px-6 py-4 text-right">
+
+                    <td className="px-5 py-4 text-slate-700">
+                      {item.product || "-"}
+                    </td>
+
+                    <td className="px-5 py-4 text-right text-slate-700">
                       {formatNumber(item.quantity)}
                     </td>
-                    <td className="px-6 py-4 text-right">
+
+                    <td className="px-5 py-4 text-right text-slate-700">
                       {formatCurrency(item.unit_cost)}
                     </td>
-                    <td className="px-6 py-4 text-right font-bold text-gray-950">
+
+                    <td className="px-5 py-4 text-right font-bold text-slate-950">
                       {formatCurrency(item.total_value)}
                     </td>
-                    <td className="px-6 py-4 text-right">
+
+                    <td className="px-5 py-4 text-right text-slate-700">
                       {formatNumber(item.threshold)}
                     </td>
-                    <td className="px-6 py-4">
+
+                    <td className="px-5 py-4">
                       <span
                         className={`rounded-full px-3 py-1 text-xs font-bold ${statusClass(
                           item.status,
@@ -674,7 +800,10 @@ function ReportPage() {
                         {item.status || "-"}
                       </span>
                     </td>
-                    <td className="px-6 py-4">{item.purchase_date || "-"}</td>
+
+                    <td className="px-5 py-4 text-slate-700">
+                      {item.purchase_date || "-"}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -691,37 +820,45 @@ function ReportPage() {
         count={lowStockReport.items?.length || 0}
         onDownload={() => handlePdfDownload("low-stock")}
         downloading={downloading === "low-stock"}
+        loading={loading.lowStock}
       >
         {lowStockReport.items?.length ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[850px] text-left">
-              <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+            <table className="w-full min-w-[850px] text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="px-6 py-4">SKU</th>
-                  <th className="px-6 py-4">Product</th>
-                  <th className="px-6 py-4 text-right">Qty</th>
-                  <th className="px-6 py-4 text-right">Threshold</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Purchase Date</th>
+                  <th className="px-5 py-3">SKU</th>
+                  <th className="px-5 py-3">Product</th>
+                  <th className="px-5 py-3 text-right">Qty</th>
+                  <th className="px-5 py-3 text-right">Threshold</th>
+                  <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3">Purchase Date</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 text-sm text-gray-800">
+
+              <tbody className="divide-y divide-slate-100">
                 {lowStockReport.items.map((item, index) => (
                   <tr
                     key={`${item.sku || "low-stock"}-${index}`}
-                    className="hover:bg-gray-50"
+                    className="transition hover:bg-slate-50"
                   >
-                    <td className="px-6 py-4 font-bold text-gray-950">
+                    <td className="px-5 py-4 font-bold text-slate-950">
                       {item.sku || "-"}
                     </td>
-                    <td className="px-6 py-4">{item.product || "-"}</td>
-                    <td className="px-6 py-4 text-right">
+
+                    <td className="px-5 py-4 text-slate-700">
+                      {item.product || "-"}
+                    </td>
+
+                    <td className="px-5 py-4 text-right text-slate-700">
                       {formatNumber(item.quantity)}
                     </td>
-                    <td className="px-6 py-4 text-right">
+
+                    <td className="px-5 py-4 text-right text-slate-700">
                       {formatNumber(item.threshold)}
                     </td>
-                    <td className="px-6 py-4">
+
+                    <td className="px-5 py-4">
                       <span
                         className={`rounded-full px-3 py-1 text-xs font-bold ${statusClass(
                           item.status || "Low Stock",
@@ -730,7 +867,10 @@ function ReportPage() {
                         {item.status || "Low Stock"}
                       </span>
                     </td>
-                    <td className="px-6 py-4">{item.purchase_date || "-"}</td>
+
+                    <td className="px-5 py-4 text-slate-700">
+                      {item.purchase_date || "-"}
+                    </td>
                   </tr>
                 ))}
               </tbody>

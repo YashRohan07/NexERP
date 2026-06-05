@@ -9,6 +9,7 @@ import {
   getSales,
 } from "../../api/saleApi";
 import Button from "../../components/common/Button";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
 import Input from "../../components/common/Input";
 import Loader from "../../components/common/Loader";
 import Modal from "../../components/common/Modal";
@@ -58,7 +59,7 @@ function getStatusClass(status) {
     return "bg-amber-50 text-amber-700";
   }
 
-  return "bg-gray-100 text-gray-700";
+  return "bg-slate-100 text-slate-700";
 }
 
 function formatMoney(value) {
@@ -96,53 +97,14 @@ function SalePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState(null);
+  const [confirmTarget, setConfirmTarget] = useState(null);
+  const [cancelTarget, setCancelTarget] = useState(null);
   const [error, setError] = useState("");
   const [formError, setFormError] = useState("");
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function loadPageData() {
-      try {
-        const [salesResponse, customersResponse, productsResponse] =
-          await Promise.all([
-            getSales({ page: 1, per_page: 10 }),
-            getCustomers({ per_page: 100 }),
-            getProducts({ per_page: 100 }),
-          ]);
-
-        if (isMounted) {
-          const salesData = salesResponse.data?.data || {};
-
-          setSales(salesData.sales || []);
-          setPagination(
-            salesData.pagination || {
-              current_page: 1,
-              per_page: 10,
-              total: 0,
-              last_page: 1,
-            },
-          );
-          setCustomers(customersResponse.data?.data?.customers || []);
-          setProducts(productsResponse.data?.data?.products || []);
-          setError("");
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError(getErrorMessage(err));
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadPageData();
-
-    return () => {
-      isMounted = false;
-    };
+    fetchSales(1);
+    fetchFormOptions();
   }, []);
 
   function buildParams(page = 1) {
@@ -180,6 +142,20 @@ function SalePage() {
       setError(getErrorMessage(err));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchFormOptions() {
+    try {
+      const [customersResponse, productsResponse] = await Promise.all([
+        getCustomers({ per_page: 100 }),
+        getProducts({ per_page: 100 }),
+      ]);
+
+      setCustomers(customersResponse.data?.data?.customers || []);
+      setProducts(productsResponse.data?.data?.products || []);
+    } catch {
+      setError("Unable to load customers or products for sale form.");
     }
   }
 
@@ -314,18 +290,25 @@ function SalePage() {
     }
   }
 
-  async function handleConfirm(sale) {
-    const confirmed = window.confirm(
-      `Confirm sale #${sale.id}? Inventory stock will decrease.`,
-    );
+  function openConfirmDialog(sale) {
+    setError("");
+    setConfirmTarget(sale);
+  }
 
-    if (!confirmed) return;
+  function openCancelDialog(sale) {
+    setError("");
+    setCancelTarget(sale);
+  }
 
-    setActionLoadingId(sale.id);
+  async function handleConfirmSale() {
+    if (!confirmTarget) return;
+
+    setActionLoadingId(confirmTarget.id);
     setError("");
 
     try {
-      await confirmSale(sale.id);
+      await confirmSale(confirmTarget.id);
+      setConfirmTarget(null);
       fetchSales(pagination.current_page);
     } catch (err) {
       setError(getErrorMessage(err));
@@ -334,16 +317,15 @@ function SalePage() {
     }
   }
 
-  async function handleCancel(sale) {
-    const confirmed = window.confirm(`Cancel draft sale #${sale.id}?`);
+  async function handleCancelSale() {
+    if (!cancelTarget) return;
 
-    if (!confirmed) return;
-
-    setActionLoadingId(sale.id);
+    setActionLoadingId(cancelTarget.id);
     setError("");
 
     try {
-      await cancelSale(sale.id);
+      await cancelSale(cancelTarget.id);
+      setCancelTarget(null);
       fetchSales(pagination.current_page);
     } catch (err) {
       setError(getErrorMessage(err));
@@ -353,37 +335,53 @@ function SalePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">
+    <div className="w-full min-w-0 space-y-5">
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70 md:p-6">
+        <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-blue-600">
               Sales Management
             </p>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-gray-950 md:text-3xl">
+
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
               Sales
             </h1>
-            <p className="mt-2 text-sm text-gray-600">
-              Create sale drafts, confirm sales, cancel drafts, and track
-              customer sales.
+
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+              Create sale drafts, confirm stock-out, and track customer sales
+              activity.
             </p>
           </div>
 
-          {isAdmin && <Button onClick={openCreateModal}>Create Sale</Button>}
+          {isAdmin && (
+            <Button
+              onClick={openCreateModal}
+              className="inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-bold shadow-md shadow-blue-100 sm:w-auto"
+            >
+              + Create Sale
+            </Button>
+          )}
         </div>
       </section>
 
-      <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70">
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-slate-950">Filters</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Search sales records by customer, status, date, or note.
+          </p>
+        </div>
+
         <form
           onSubmit={handleFilterSubmit}
-          className="grid gap-4 md:grid-cols-3 xl:grid-cols-6"
+          className="grid gap-4 md:grid-cols-2 xl:grid-cols-[1.4fr_1fr_1fr_1fr_0.8fr_auto]"
         >
           <Input
             label="Search"
             name="search"
             value={filters.search}
             onChange={handleFilterChange}
-            placeholder="Customer or note"
+            placeholder="Search by customer or note"
           />
 
           <Select
@@ -424,13 +422,17 @@ function SalePage() {
           />
 
           <div className="flex items-end gap-2">
-            <Button type="submit" className="w-full">
+            <Button
+              type="submit"
+              className="h-[42px] min-w-24 rounded-xl font-bold"
+            >
               Filter
             </Button>
+
             <Button
               type="button"
               variant="outline"
-              className="w-full"
+              className="h-[42px] min-w-24 rounded-xl font-bold"
               onClick={resetFilters}
             >
               Reset
@@ -440,7 +442,7 @@ function SalePage() {
       </section>
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           {error}
         </div>
       )}
@@ -449,30 +451,38 @@ function SalePage() {
         <Loader text="Loading sales..." />
       ) : (
         <>
-          <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-            <div className="border-b border-gray-200 px-5 py-4">
-              <h2 className="text-lg font-semibold text-gray-950">Sale List</h2>
-              <p className="mt-1 text-sm text-gray-500">
-                {pagination.total} sale{pagination.total === 1 ? "" : "s"}{" "}
-                found.
-              </p>
+          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm shadow-slate-200/70">
+            <div className="flex flex-col gap-2 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-slate-950">Sale List</h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  {pagination.total} sale{pagination.total === 1 ? "" : "s"}{" "}
+                  found.
+                </p>
+              </div>
+
+              <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                {pagination.total} record{pagination.total === 1 ? "" : "s"}
+              </span>
             </div>
 
             {sales.length === 0 ? (
-              <div className="px-5 py-8">
-                <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-5 py-6 text-center">
-                  <p className="text-sm font-medium text-gray-700">
-                    No sales found.
+              <div className="px-5 py-7">
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-6 text-center">
+                  <p className="text-sm font-semibold text-slate-700">
+                    No sales available
                   </p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Try changing filters or create a sale draft.
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    Create a sale draft or adjust the current filters.
                   </p>
                 </div>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[1100px] text-left text-sm">
-                  <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                     <tr>
                       <th className="px-5 py-3">Sale ID</th>
                       <th className="px-5 py-3">Customer</th>
@@ -484,37 +494,47 @@ function SalePage() {
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-slate-100">
                     {sales.map((sale) => (
-                      <tr key={sale.id} className="hover:bg-gray-50">
-                        <td className="px-5 py-4 font-semibold text-gray-950">
+                      <tr
+                        key={sale.id}
+                        className="transition hover:bg-slate-50"
+                      >
+                        <td className="px-5 py-4 font-semibold text-slate-950">
                           #{sale.id}
                         </td>
-                        <td className="px-5 py-4 text-gray-700">
+
+                        <td className="px-5 py-4 text-slate-700">
                           {sale.customer?.name || "-"}
                         </td>
-                        <td className="px-5 py-4 text-gray-700">
+
+                        <td className="px-5 py-4 text-slate-700">
                           {sale.sale_date || "-"}
                         </td>
+
                         <td className="px-5 py-4">
                           <span
-                            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold capitalize ${getStatusClass(
+                            className={`inline-flex rounded-full px-3 py-1 text-xs font-bold capitalize ${getStatusClass(
                               sale.status,
                             )}`}
                           >
                             {sale.status}
                           </span>
                         </td>
-                        <td className="px-5 py-4 text-right font-medium text-gray-800">
+
+                        <td className="px-5 py-4 text-right font-semibold text-slate-800">
                           ৳{formatMoney(sale.total_amount)}
                         </td>
-                        <td className="px-5 py-4 text-gray-700">
+
+                        <td className="px-5 py-4 text-slate-700">
                           {sale.note || "-"}
                         </td>
+
                         <td className="px-5 py-4">
                           <div className="flex justify-end gap-2">
                             <Button
                               variant="outline"
+                              className="rounded-xl font-bold"
                               onClick={() => navigate(`/sales/${sale.id}`)}
                             >
                               View
@@ -523,14 +543,17 @@ function SalePage() {
                             {isAdmin && sale.status === "draft" && (
                               <>
                                 <Button
-                                  onClick={() => handleConfirm(sale)}
+                                  className="rounded-xl font-bold"
+                                  onClick={() => openConfirmDialog(sale)}
                                   disabled={actionLoadingId === sale.id}
                                 >
                                   Confirm
                                 </Button>
+
                                 <Button
                                   variant="danger"
-                                  onClick={() => handleCancel(sale)}
+                                  className="rounded-xl font-bold"
+                                  onClick={() => openCancelDialog(sale)}
                                   disabled={actionLoadingId === sale.id}
                                 >
                                   Cancel
@@ -547,7 +570,9 @@ function SalePage() {
             )}
           </section>
 
-          <Pagination pagination={pagination} onPageChange={fetchSales} />
+          {pagination.total > 0 && (
+            <Pagination pagination={pagination} onPageChange={fetchSales} />
+          )}
         </>
       )}
 
@@ -558,7 +583,7 @@ function SalePage() {
           width="max-w-5xl"
         >
           {formError && (
-            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
               {formError}
             </div>
           )}
@@ -598,11 +623,22 @@ function SalePage() {
               />
             </div>
 
-            <div className="rounded-2xl border border-gray-200">
-              <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-                <h3 className="font-semibold text-gray-950">Sale Items</h3>
-                <Button type="button" variant="outline" onClick={addItemRow}>
-                  Add Item
+            <div className="rounded-3xl border border-slate-200">
+              <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+                <div>
+                  <h3 className="font-bold text-slate-950">Sale Items</h3>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    Add products, quantity, and selling price.
+                  </p>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-xl font-bold"
+                  onClick={addItemRow}
+                >
+                  + Add Item
                 </Button>
               </div>
 
@@ -610,7 +646,7 @@ function SalePage() {
                 {form.items.map((item, index) => (
                   <div
                     key={index}
-                    className="grid gap-4 rounded-xl border border-gray-200 bg-gray-50 p-4 md:grid-cols-5"
+                    className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 xl:grid-cols-[1.2fr_0.8fr_0.9fr_0.8fr_auto]"
                   >
                     <Select
                       label="Product"
@@ -650,10 +686,11 @@ function SalePage() {
                     />
 
                     <div>
-                      <p className="mb-1 text-sm font-medium text-gray-700">
+                      <p className="mb-1 text-sm font-medium text-slate-700">
                         Line Total
                       </p>
-                      <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800">
+
+                      <div className="flex h-[42px] items-center rounded-lg border border-slate-200 bg-slate-100 px-3 text-sm font-bold text-slate-950">
                         ৳{formatMoney(getLineTotal(item))}
                       </div>
                     </div>
@@ -661,8 +698,8 @@ function SalePage() {
                     <div className="flex items-end">
                       <Button
                         type="button"
-                        variant="danger"
-                        className="w-full"
+                        variant="outline"
+                        className="h-[42px] rounded-xl border-red-200 px-4 font-bold text-red-600 hover:bg-red-50 hover:text-red-700"
                         disabled={form.items.length === 1}
                         onClick={() => removeItemRow(index)}
                       >
@@ -674,10 +711,13 @@ function SalePage() {
               </div>
             </div>
 
-            <div className="flex flex-col justify-between gap-4 rounded-xl border border-blue-100 bg-blue-50 p-4 sm:flex-row sm:items-center">
+            <div className="flex flex-col justify-between gap-4 rounded-2xl border border-blue-100 bg-blue-50 p-4 sm:flex-row sm:items-center">
               <div>
-                <p className="text-sm font-medium text-blue-700">Sale Total</p>
-                <p className="mt-1 text-2xl font-bold text-blue-950">
+                <p className="text-sm font-semibold text-blue-700">
+                  Sale Total
+                </p>
+
+                <p className="mt-1 text-3xl font-bold text-blue-950">
                   ৳{formatMoney(getFormTotal())}
                 </p>
               </div>
@@ -686,12 +726,17 @@ function SalePage() {
                 <Button
                   type="button"
                   variant="outline"
+                  className="rounded-xl font-bold"
                   onClick={() => setShowFormModal(false)}
                 >
                   Cancel
                 </Button>
 
-                <Button type="submit" disabled={saving}>
+                <Button
+                  type="submit"
+                  disabled={saving}
+                  className="rounded-xl font-bold"
+                >
                   {saving ? "Creating..." : "Create Draft"}
                 </Button>
               </div>
@@ -699,6 +744,38 @@ function SalePage() {
           </form>
         </Modal>
       )}
+
+      <ConfirmDialog
+        open={Boolean(confirmTarget)}
+        title="Confirm Sale"
+        message={`Confirm sale #${
+          confirmTarget?.id || ""
+        }? Inventory stock will decrease after this action.`}
+        confirmText="Confirm Sale"
+        cancelText="Review Again"
+        variant="primary"
+        loading={actionLoadingId === confirmTarget?.id}
+        onConfirm={handleConfirmSale}
+        onCancel={() => {
+          if (!actionLoadingId) setConfirmTarget(null);
+        }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(cancelTarget)}
+        title="Cancel Sale Draft"
+        message={`Are you sure you want to cancel sale #${
+          cancelTarget?.id || ""
+        }? This action cannot be undone.`}
+        confirmText="Cancel Draft"
+        cancelText="Keep Draft"
+        variant="danger"
+        loading={actionLoadingId === cancelTarget?.id}
+        onConfirm={handleCancelSale}
+        onCancel={() => {
+          if (!actionLoadingId) setCancelTarget(null);
+        }}
+      />
     </div>
   );
 }

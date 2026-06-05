@@ -18,7 +18,7 @@ class UserSeeder extends Seeder
             ['email' => 'admin@nexerp.com'],
             [
                 'name' => 'Admin User',
-                'password' => 'password',
+                'password' => 'Admin@1234',
                 'role' => 'admin',
             ]
         );
@@ -27,7 +27,7 @@ class UserSeeder extends Seeder
             ['email' => 'member@nexerp.com'],
             [
                 'name' => 'Member User',
-                'password' => 'password',
+                'password' => 'Member@1234',
                 'role' => 'member',
             ]
         );

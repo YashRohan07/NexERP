@@ -9,6 +9,7 @@ import {
 } from "../../api/purchaseApi";
 import { getSuppliers } from "../../api/supplierApi";
 import Button from "../../components/common/Button";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
 import Input from "../../components/common/Input";
 import Loader from "../../components/common/Loader";
 import Modal from "../../components/common/Modal";
@@ -58,7 +59,7 @@ function getStatusClass(status) {
     return "bg-amber-50 text-amber-700";
   }
 
-  return "bg-gray-100 text-gray-700";
+  return "bg-slate-100 text-slate-700";
 }
 
 function formatMoney(value) {
@@ -92,6 +93,9 @@ function PurchasePage() {
   const [products, setProducts] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [showFormModal, setShowFormModal] = useState(false);
+
+  const [confirmTarget, setConfirmTarget] = useState(null);
+  const [cancelTarget, setCancelTarget] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -287,18 +291,35 @@ function PurchasePage() {
     }
   }
 
-  async function handleConfirm(purchase) {
-    const confirmed = window.confirm(
-      `Confirm purchase #${purchase.id}? Inventory stock will increase.`,
-    );
+  function openConfirmDialog(purchase) {
+    setError("");
+    setConfirmTarget(purchase);
+  }
 
-    if (!confirmed) return;
+  function closeConfirmDialog() {
+    if (actionLoadingId) return;
+    setConfirmTarget(null);
+  }
 
-    setActionLoadingId(purchase.id);
+  function openCancelDialog(purchase) {
+    setError("");
+    setCancelTarget(purchase);
+  }
+
+  function closeCancelDialog() {
+    if (actionLoadingId) return;
+    setCancelTarget(null);
+  }
+
+  async function handleConfirmPurchaseAction() {
+    if (!confirmTarget) return;
+
+    setActionLoadingId(confirmTarget.id);
     setError("");
 
     try {
-      await confirmPurchase(purchase.id);
+      await confirmPurchase(confirmTarget.id);
+      setConfirmTarget(null);
       fetchPurchases(pagination.current_page);
     } catch (err) {
       setError(getErrorMessage(err));
@@ -307,16 +328,15 @@ function PurchasePage() {
     }
   }
 
-  async function handleCancel(purchase) {
-    const confirmed = window.confirm(`Cancel draft purchase #${purchase.id}?`);
+  async function handleCancelPurchaseAction() {
+    if (!cancelTarget) return;
 
-    if (!confirmed) return;
-
-    setActionLoadingId(purchase.id);
+    setActionLoadingId(cancelTarget.id);
     setError("");
 
     try {
-      await cancelPurchase(purchase.id);
+      await cancelPurchase(cancelTarget.id);
+      setCancelTarget(null);
       fetchPurchases(pagination.current_page);
     } catch (err) {
       setError(getErrorMessage(err));
@@ -326,39 +346,53 @@ function PurchasePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">
+    <div className="w-full min-w-0 space-y-5">
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70 md:p-6">
+        <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-blue-600">
               Purchase Management
             </p>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-gray-950 md:text-3xl">
+
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
               Purchases
             </h1>
-            <p className="mt-2 text-sm text-gray-600">
-              Create purchase drafts, view supplier purchases, confirm stock-in,
-              and cancel drafts.
+
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+              Create purchase drafts, confirm stock-in, and track supplier
+              purchase activity.
             </p>
           </div>
 
           {isAdmin && (
-            <Button onClick={openCreateModal}>Create Purchase</Button>
+            <Button
+              onClick={openCreateModal}
+              className="inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-bold shadow-md shadow-blue-100 sm:w-auto"
+            >
+              + Create Purchase
+            </Button>
           )}
         </div>
       </section>
 
-      <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70">
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-slate-950">Filters</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Search purchase records by supplier, status, date, or note.
+          </p>
+        </div>
+
         <form
           onSubmit={handleFilterSubmit}
-          className="grid gap-4 md:grid-cols-3 xl:grid-cols-6"
+          className="grid gap-4 md:grid-cols-2 xl:grid-cols-[1.4fr_1fr_1fr_1fr_0.8fr_auto]"
         >
           <Input
             label="Search"
             name="search"
             value={filters.search}
             onChange={handleFilterChange}
-            placeholder="Supplier or note"
+            placeholder="Search by supplier or note"
           />
 
           <Select
@@ -399,13 +433,17 @@ function PurchasePage() {
           />
 
           <div className="flex items-end gap-2">
-            <Button type="submit" className="w-full">
+            <Button
+              type="submit"
+              className="h-[42px] min-w-24 rounded-xl font-bold"
+            >
               Filter
             </Button>
+
             <Button
               type="button"
               variant="outline"
-              className="w-full"
+              className="h-[42px] min-w-24 rounded-xl font-bold"
               onClick={resetFilters}
             >
               Reset
@@ -415,7 +453,7 @@ function PurchasePage() {
       </section>
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           {error}
         </div>
       )}
@@ -424,34 +462,40 @@ function PurchasePage() {
         <Loader text="Loading purchases..." />
       ) : (
         <>
-          <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm shadow-slate-200/70">
+            <div className="flex flex-col gap-2 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-gray-950">
+                <h2 className="text-lg font-bold text-slate-950">
                   Purchase List
                 </h2>
-                <p className="mt-1 text-sm text-gray-500">
+
+                <p className="mt-1 text-sm text-slate-500">
                   {pagination.total} purchase
                   {pagination.total === 1 ? "" : "s"} found.
                 </p>
               </div>
+
+              <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                {pagination.total} record{pagination.total === 1 ? "" : "s"}
+              </span>
             </div>
 
             {purchases.length === 0 ? (
-              <div className="px-5 py-8">
-                <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-5 py-6 text-center">
-                  <p className="text-sm font-medium text-gray-700">
-                    No purchases found.
+              <div className="px-5 py-7">
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-6 text-center">
+                  <p className="text-sm font-semibold text-slate-700">
+                    No purchases available
                   </p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Try changing filters or create a purchase draft.
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    Create a purchase draft or adjust the current filters.
                   </p>
                 </div>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[1100px] text-left text-sm">
-                  <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                     <tr>
                       <th className="px-5 py-3">Purchase ID</th>
                       <th className="px-5 py-3">Supplier</th>
@@ -463,37 +507,47 @@ function PurchasePage() {
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-slate-100">
                     {purchases.map((purchase) => (
-                      <tr key={purchase.id} className="hover:bg-gray-50">
-                        <td className="px-5 py-4 font-semibold text-gray-950">
+                      <tr
+                        key={purchase.id}
+                        className="transition hover:bg-slate-50"
+                      >
+                        <td className="px-5 py-4 font-semibold text-slate-950">
                           #{purchase.id}
                         </td>
-                        <td className="px-5 py-4 text-gray-700">
+
+                        <td className="px-5 py-4 text-slate-700">
                           {purchase.supplier?.name || "-"}
                         </td>
-                        <td className="px-5 py-4 text-gray-700">
+
+                        <td className="px-5 py-4 text-slate-700">
                           {purchase.purchase_date || "-"}
                         </td>
+
                         <td className="px-5 py-4">
                           <span
-                            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold capitalize ${getStatusClass(
+                            className={`inline-flex rounded-full px-3 py-1 text-xs font-bold capitalize ${getStatusClass(
                               purchase.status,
                             )}`}
                           >
                             {purchase.status}
                           </span>
                         </td>
-                        <td className="px-5 py-4 text-right font-medium text-gray-800">
+
+                        <td className="px-5 py-4 text-right font-semibold text-slate-800">
                           ৳{formatMoney(purchase.total_amount)}
                         </td>
-                        <td className="px-5 py-4 text-gray-700">
+
+                        <td className="px-5 py-4 text-slate-700">
                           {purchase.note || "-"}
                         </td>
+
                         <td className="px-5 py-4">
                           <div className="flex justify-end gap-2">
                             <Button
                               variant="outline"
+                              className="rounded-xl font-bold"
                               onClick={() =>
                                 navigate(`/purchases/${purchase.id}`)
                               }
@@ -504,14 +558,17 @@ function PurchasePage() {
                             {isAdmin && purchase.status === "draft" && (
                               <>
                                 <Button
-                                  onClick={() => handleConfirm(purchase)}
+                                  className="rounded-xl font-bold"
+                                  onClick={() => openConfirmDialog(purchase)}
                                   disabled={actionLoadingId === purchase.id}
                                 >
                                   Confirm
                                 </Button>
+
                                 <Button
                                   variant="danger"
-                                  onClick={() => handleCancel(purchase)}
+                                  className="rounded-xl font-bold"
+                                  onClick={() => openCancelDialog(purchase)}
                                   disabled={actionLoadingId === purchase.id}
                                 >
                                   Cancel
@@ -528,7 +585,9 @@ function PurchasePage() {
             )}
           </section>
 
-          <Pagination pagination={pagination} onPageChange={fetchPurchases} />
+          {pagination.total > 0 && (
+            <Pagination pagination={pagination} onPageChange={fetchPurchases} />
+          )}
         </>
       )}
 
@@ -539,7 +598,7 @@ function PurchasePage() {
           width="max-w-5xl"
         >
           {formError && (
-            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
               {formError}
             </div>
           )}
@@ -579,11 +638,22 @@ function PurchasePage() {
               />
             </div>
 
-            <div className="rounded-2xl border border-gray-200">
-              <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-                <h3 className="font-semibold text-gray-950">Purchase Items</h3>
-                <Button type="button" variant="outline" onClick={addItemRow}>
-                  Add Item
+            <div className="rounded-3xl border border-slate-200">
+              <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+                <div>
+                  <h3 className="font-bold text-slate-950">Purchase Items</h3>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    Add products, quantity, and purchase price.
+                  </p>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-xl font-bold"
+                  onClick={addItemRow}
+                >
+                  + Add Item
                 </Button>
               </div>
 
@@ -591,7 +661,7 @@ function PurchasePage() {
                 {form.items.map((item, index) => (
                   <div
                     key={index}
-                    className="grid gap-4 rounded-xl border border-gray-200 bg-gray-50 p-4 md:grid-cols-5"
+                    className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 xl:grid-cols-[1.2fr_0.8fr_0.9fr_0.8fr_auto]"
                   >
                     <Select
                       label="Product"
@@ -630,10 +700,11 @@ function PurchasePage() {
                     />
 
                     <div>
-                      <p className="mb-1 text-sm font-medium text-gray-700">
+                      <p className="mb-1 text-sm font-medium text-slate-700">
                         Line Total
                       </p>
-                      <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800">
+
+                      <div className="flex h-[42px] items-center rounded-lg border border-slate-200 bg-slate-100 px-3 text-sm font-bold text-slate-950">
                         ৳{formatMoney(getLineTotal(item))}
                       </div>
                     </div>
@@ -641,8 +712,8 @@ function PurchasePage() {
                     <div className="flex items-end">
                       <Button
                         type="button"
-                        variant="danger"
-                        className="w-full"
+                        variant="outline"
+                        className="h-[42px] rounded-xl border-red-200 px-4 font-bold text-red-600 hover:bg-red-50 hover:text-red-700"
                         disabled={form.items.length === 1}
                         onClick={() => removeItemRow(index)}
                       >
@@ -654,12 +725,13 @@ function PurchasePage() {
               </div>
             </div>
 
-            <div className="flex flex-col justify-between gap-4 rounded-xl border border-blue-100 bg-blue-50 p-4 sm:flex-row sm:items-center">
+            <div className="flex flex-col justify-between gap-4 rounded-2xl border border-blue-100 bg-blue-50 p-4 sm:flex-row sm:items-center">
               <div>
-                <p className="text-sm font-medium text-blue-700">
+                <p className="text-sm font-semibold text-blue-700">
                   Purchase Total
                 </p>
-                <p className="mt-1 text-2xl font-bold text-blue-950">
+
+                <p className="mt-1 text-3xl font-bold text-blue-950">
                   ৳{formatMoney(getFormTotal())}
                 </p>
               </div>
@@ -668,12 +740,17 @@ function PurchasePage() {
                 <Button
                   type="button"
                   variant="outline"
+                  className="rounded-xl font-bold"
                   onClick={() => setShowFormModal(false)}
                 >
                   Cancel
                 </Button>
 
-                <Button type="submit" disabled={saving}>
+                <Button
+                  type="submit"
+                  disabled={saving}
+                  className="rounded-xl font-bold"
+                >
                   {saving ? "Creating..." : "Create Draft"}
                 </Button>
               </div>
@@ -681,6 +758,34 @@ function PurchasePage() {
           </form>
         </Modal>
       )}
+
+      <ConfirmDialog
+        open={Boolean(confirmTarget)}
+        title="Confirm Purchase"
+        message={`Confirm purchase #${
+          confirmTarget?.id || ""
+        }? Inventory stock will increase after this action.`}
+        confirmText="Confirm Purchase"
+        cancelText="Review Again"
+        variant="primary"
+        loading={actionLoadingId === confirmTarget?.id}
+        onConfirm={handleConfirmPurchaseAction}
+        onCancel={closeConfirmDialog}
+      />
+
+      <ConfirmDialog
+        open={Boolean(cancelTarget)}
+        title="Cancel Draft Purchase"
+        message={`Cancel draft purchase #${
+          cancelTarget?.id || ""
+        }? This action cannot be undone.`}
+        confirmText="Cancel Draft"
+        cancelText="Keep Draft"
+        variant="danger"
+        loading={actionLoadingId === cancelTarget?.id}
+        onConfirm={handleCancelPurchaseAction}
+        onCancel={closeCancelDialog}
+      />
     </div>
   );
 }

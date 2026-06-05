@@ -48,7 +48,7 @@ function getStatusClass(status) {
     return "bg-emerald-50 text-emerald-700";
   }
 
-  return "bg-gray-100 text-gray-700";
+  return "bg-slate-100 text-slate-700";
 }
 
 function normalizeProduct(product) {
@@ -78,6 +78,7 @@ function PosPage() {
 
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [recentlyAddedProductId, setRecentlyAddedProductId] = useState(null);
   const [error, setError] = useState("");
 
   const filteredProducts = useMemo(() => {
@@ -196,6 +197,11 @@ function PosPage() {
 
     setError("");
     setReceipt(null);
+    setRecentlyAddedProductId(product.product_id);
+
+    window.setTimeout(() => {
+      setRecentlyAddedProductId(null);
+    }, 900);
 
     setCart((previous) => {
       const existingItem = previous.find(
@@ -326,102 +332,136 @@ function PosPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
-          <div>
-            <p className="text-sm font-bold uppercase tracking-wide text-blue-600">
+    <div className="w-full min-w-0 space-y-5">
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70 md:p-6">
+        <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-blue-600">
               Point of Sale
             </p>
-            <h1 className="mt-2 text-3xl font-bold text-gray-950">
+
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
               POS Checkout
             </h1>
-            <p className="mt-2 text-sm text-gray-600">
-              Search products, build a cart, complete checkout, and print
-              receipts.
+
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+              Search products, add items to cart, and complete quick customer
+              checkout.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-blue-100 bg-blue-50 px-6 py-4 text-center">
-            <p className="text-sm font-medium text-blue-700">Cart Total</p>
-            <p className="mt-1 text-2xl font-bold text-gray-950">
+          <div className="w-full rounded-2xl border border-blue-100 bg-blue-50 px-5 py-4 text-center shadow-sm sm:w-auto sm:min-w-36">
+            <p className="text-sm font-semibold text-blue-700">Cart Total</p>
+
+            <p className="mt-1 text-2xl font-bold text-slate-950">
               {formatMoney(cartTotal)}
             </p>
-            <p className="mt-1 text-sm text-blue-700">{cartQuantity} items</p>
+
+            <p className="mt-1 text-sm font-medium text-blue-700">
+              {cartQuantity} item{cartQuantity === 1 ? "" : "s"}
+            </p>
           </div>
         </div>
-      </div>
+      </section>
 
       {!isAdmin && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-medium text-amber-800">
           Member users can view POS products only. Add to cart and checkout are
           admin-only actions.
         </div>
       )}
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-medium text-red-700">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-medium text-red-700">
           {error}
         </div>
       )}
 
-      <div
-        className={`grid gap-6 ${isAdmin ? "xl:grid-cols-[1fr_420px]" : ""}`}
+      <section
+        className={`grid gap-5 ${isAdmin ? "xl:grid-cols-[1fr_420px]" : ""}`}
       >
-        <div className="space-y-6">
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-            <label className="text-sm font-medium text-gray-700">
-              Search Products
-            </label>
+        <div className="min-w-0 space-y-5">
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70">
+            <div className="mb-4">
+              <h2 className="text-lg font-bold text-slate-950">
+                Product Search
+              </h2>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Find checkout products by SKU, name, size, or color.
+              </p>
+            </div>
+
             <input
               type="text"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search by SKU, name, size, or color"
-              className="mt-2 w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-            <div className="border-b border-gray-200 p-5">
-              <h2 className="text-xl font-bold text-gray-950">
-                Available Products
-              </h2>
-              <p className="mt-1 text-sm text-gray-600">
-                {filteredProducts.length} products available.
-              </p>
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm shadow-slate-200/70">
+            <div className="flex flex-col gap-2 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-slate-950">
+                  Available Products
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  {filteredProducts.length} product
+                  {filteredProducts.length === 1 ? "" : "s"} available.
+                </p>
+              </div>
+
+              <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                {filteredProducts.length} item
+                {filteredProducts.length === 1 ? "" : "s"}
+              </span>
             </div>
 
             {filteredProducts.length === 0 ? (
-              <div className="p-6 text-sm text-gray-600">
-                No POS products found.
+              <div className="px-5 py-7">
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-6 text-center">
+                  <p className="text-sm font-semibold text-slate-700">
+                    No products available for checkout
+                  </p>
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    Add products with stock or adjust your search keyword.
+                  </p>
+                </div>
               </div>
             ) : (
               <div className="grid gap-4 p-5 md:grid-cols-2">
                 {filteredProducts.map((product) => {
                   const remainingStock = getRemainingStock(product);
                   const isOutOfStock = remainingStock <= 0;
+                  const isRecentlyAdded =
+                    recentlyAddedProductId === product.product_id;
 
                   return (
                     <div
                       key={product.product_id}
-                      className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+                      className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-xs font-bold text-gray-500">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
                             {product.sku}
                           </p>
-                          <h3 className="mt-1 text-xl font-bold text-gray-950">
+
+                          <h3 className="mt-1 truncate text-lg font-bold text-slate-950">
                             {product.name}
                           </h3>
-                          <p className="mt-1 text-sm text-gray-600">
+
+                          <p className="mt-1 text-sm text-slate-500">
                             {product.size} / {product.color}
                           </p>
                         </div>
 
                         <span
-                          className={`rounded-full px-3 py-1 text-xs font-bold ${getStatusClass(
+                          className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${getStatusClass(
                             product.stock_status,
                           )}`}
                         >
@@ -430,16 +470,22 @@ function PosPage() {
                       </div>
 
                       <div className="mt-5 grid grid-cols-2 gap-3">
-                        <div className="rounded-xl bg-gray-50 p-4">
-                          <p className="text-sm text-gray-500">Stock</p>
-                          <p className="mt-1 font-bold text-gray-950">
+                        <div className="rounded-2xl bg-slate-50 p-4">
+                          <p className="text-sm font-medium text-slate-500">
+                            Stock
+                          </p>
+
+                          <p className="mt-1 text-lg font-bold text-slate-950">
                             {isAdmin ? remainingStock : product.available_stock}
                           </p>
                         </div>
 
-                        <div className="rounded-xl bg-gray-50 p-4">
-                          <p className="text-sm text-gray-500">Unit Cost</p>
-                          <p className="mt-1 font-bold text-gray-950">
+                        <div className="rounded-2xl bg-slate-50 p-4">
+                          <p className="text-sm font-medium text-slate-500">
+                            Selling Price
+                          </p>
+
+                          <p className="mt-1 text-lg font-bold text-slate-950">
                             {formatMoney(product.unit_cost)}
                           </p>
                         </div>
@@ -450,9 +496,17 @@ function PosPage() {
                           type="button"
                           onClick={() => addToCart(product)}
                           disabled={isOutOfStock}
-                          className="mt-5 w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                          className={`mt-5 w-full rounded-xl px-4 py-3 text-sm font-bold text-white shadow-md transition disabled:cursor-not-allowed disabled:bg-blue-300 disabled:shadow-none ${
+                            isRecentlyAdded
+                              ? "bg-emerald-600 shadow-emerald-100"
+                              : "bg-blue-600 shadow-blue-100 hover:bg-blue-700"
+                          }`}
                         >
-                          {isOutOfStock ? "Out of Stock" : "Add to Cart"}
+                          {isOutOfStock
+                            ? "Out of Stock"
+                            : isRecentlyAdded
+                              ? "Added ✓"
+                              : "Add to Cart"}
                         </button>
                       )}
                     </div>
@@ -464,27 +518,29 @@ function PosPage() {
         </div>
 
         {isAdmin && (
-          <div className="space-y-6">
-            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-              <div className="border-b border-gray-200 p-5">
-                <h2 className="text-xl font-bold text-gray-950">
+          <aside className="min-w-0 space-y-5">
+            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm shadow-slate-200/70 xl:sticky xl:top-24">
+              <div className="border-b border-slate-200 px-5 py-4">
+                <h2 className="text-lg font-bold text-slate-950">
                   Checkout Cart
                 </h2>
-                <p className="mt-1 text-sm text-gray-600">
-                  Review items before completing checkout.
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Review selected items and complete the sale.
                 </p>
               </div>
 
               <div className="space-y-4 p-5">
                 <div>
-                  <label className="text-sm font-medium text-gray-700">
+                  <label className="text-sm font-medium text-slate-700">
                     Customer
                   </label>
+
                   <select
                     name="customer_id"
                     value={checkoutForm.customer_id}
                     onChange={handleCheckoutFormChange}
-                    className="mt-2 w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   >
                     <option value="">Walk-in / Default Customer</option>
                     {customers.map((customer) => (
@@ -496,27 +552,29 @@ function PosPage() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-gray-700">
+                  <label className="text-sm font-medium text-slate-700">
                     Sale Date
                   </label>
+
                   <input
                     type="date"
                     name="sale_date"
                     value={checkoutForm.sale_date}
                     onChange={handleCheckoutFormChange}
-                    className="mt-2 w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-gray-700">
+                  <label className="text-sm font-medium text-slate-700">
                     Payment Method
                   </label>
+
                   <select
                     name="payment_method"
                     value={checkoutForm.payment_method}
                     onChange={handleCheckoutFormChange}
-                    className="mt-2 w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   >
                     <option value="cash">Cash</option>
                     <option value="card">Card</option>
@@ -525,25 +583,27 @@ function PosPage() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-gray-700">
+                  <label className="text-sm font-medium text-slate-700">
                     Note
                   </label>
+
                   <input
                     type="text"
                     name="note"
                     value={checkoutForm.note}
                     onChange={handleCheckoutFormChange}
                     placeholder="Optional"
-                    className="mt-2 w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
 
                 {cart.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-gray-300 p-6 text-center">
-                    <p className="text-sm font-medium text-gray-700">
-                      Cart is empty.
+                  <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-6 text-center">
+                    <p className="text-sm font-semibold text-slate-700">
+                      Cart is empty
                     </p>
-                    <p className="mt-1 text-sm text-gray-500">
+
+                    <p className="mt-1 text-xs text-slate-500">
                       Add products from the product list.
                     </p>
                   </div>
@@ -552,14 +612,15 @@ function PosPage() {
                     {cart.map((item) => (
                       <div
                         key={item.product_id}
-                        className="rounded-xl border border-gray-200 bg-gray-50 p-4"
+                        className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
                       >
                         <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <h3 className="font-bold text-gray-950">
+                          <div className="min-w-0">
+                            <h3 className="truncate font-bold text-slate-950">
                               {item.name}
                             </h3>
-                            <p className="mt-1 text-sm text-gray-500">
+
+                            <p className="mt-1 text-sm text-slate-500">
                               {item.sku} / Stock: {item.available_stock}
                             </p>
                           </div>
@@ -567,7 +628,7 @@ function PosPage() {
                           <button
                             type="button"
                             onClick={() => removeFromCart(item.product_id)}
-                            className="text-sm font-semibold text-red-600 hover:text-red-700"
+                            className="shrink-0 rounded-full px-2.5 py-1 text-xs font-bold text-red-600 transition hover:bg-red-50 hover:text-red-700"
                           >
                             Remove
                           </button>
@@ -575,9 +636,10 @@ function PosPage() {
 
                         <div className="mt-4 grid grid-cols-2 gap-3">
                           <div>
-                            <label className="text-sm font-medium text-gray-700">
+                            <label className="text-sm font-medium text-slate-700">
                               Qty
                             </label>
+
                             <input
                               type="number"
                               min="1"
@@ -590,14 +652,15 @@ function PosPage() {
                                   event.target.value,
                                 )
                               }
-                              className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                              className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                             />
                           </div>
 
                           <div>
-                            <label className="text-sm font-medium text-gray-700">
+                            <label className="text-sm font-medium text-slate-700">
                               Price
                             </label>
+
                             <input
                               type="number"
                               min="0"
@@ -609,12 +672,12 @@ function PosPage() {
                                   event.target.value,
                                 )
                               }
-                              className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                              className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                             />
                           </div>
                         </div>
 
-                        <div className="mt-4 rounded-lg bg-white px-4 py-3 text-right text-sm font-bold text-gray-950">
+                        <div className="mt-4 rounded-xl bg-white px-4 py-3 text-right text-sm font-bold text-slate-950">
                           Line Total:{" "}
                           {formatMoney(
                             Number(item.quantity || 0) *
@@ -626,17 +689,18 @@ function PosPage() {
                   </div>
                 )}
 
-                <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
-                  <div className="flex items-center justify-between text-sm text-blue-700">
+                <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                  <div className="flex items-center justify-between text-sm font-medium text-blue-700">
                     <span>Items</span>
                     <span>{cartQuantity}</span>
                   </div>
 
                   <div className="mt-3 flex items-center justify-between">
-                    <span className="text-xl font-bold text-gray-950">
+                    <span className="text-xl font-bold text-slate-950">
                       Total
                     </span>
-                    <span className="text-2xl font-bold text-gray-950">
+
+                    <span className="text-2xl font-bold text-slate-950">
                       {formatMoney(cartTotal)}
                     </span>
                   </div>
@@ -647,7 +711,7 @@ function PosPage() {
                     type="button"
                     onClick={clearCart}
                     disabled={checkoutLoading || cart.length === 0}
-                    className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     Clear
                   </button>
@@ -656,7 +720,7 @@ function PosPage() {
                     type="button"
                     onClick={handleCheckout}
                     disabled={checkoutLoading || cart.length === 0}
-                    className="rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                    className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-md shadow-blue-100 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300 disabled:shadow-none"
                   >
                     {checkoutLoading ? "Processing..." : "Checkout"}
                   </button>
@@ -665,12 +729,13 @@ function PosPage() {
             </div>
 
             {receipt && (
-              <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-                <div className="border-b border-gray-200 p-5">
-                  <h2 className="text-xl font-bold text-gray-950">
+              <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm shadow-slate-200/70">
+                <div className="border-b border-slate-200 px-5 py-4">
+                  <h2 className="text-lg font-bold text-slate-950">
                     Receipt #{receipt.sale_id}
                   </h2>
-                  <p className="mt-1 text-sm text-gray-600">
+
+                  <p className="mt-1 text-sm text-slate-500">
                     Checkout completed successfully.
                   </p>
                 </div>
@@ -678,29 +743,33 @@ function PosPage() {
                 <div className="space-y-4 p-5">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <p className="text-gray-500">Customer</p>
-                      <p className="font-bold text-gray-950">
+                      <p className="text-slate-500">Customer</p>
+
+                      <p className="font-bold text-slate-950">
                         {receipt.customer?.name || "Walk-in Customer"}
                       </p>
                     </div>
 
                     <div>
-                      <p className="text-gray-500">Date</p>
-                      <p className="font-bold text-gray-950">
+                      <p className="text-slate-500">Date</p>
+
+                      <p className="font-bold text-slate-950">
                         {receipt.sale_date}
                       </p>
                     </div>
 
                     <div>
-                      <p className="text-gray-500">Channel</p>
-                      <p className="font-bold uppercase text-gray-950">
+                      <p className="text-slate-500">Channel</p>
+
+                      <p className="font-bold uppercase text-slate-950">
                         {receipt.sale_channel || "POS"}
                       </p>
                     </div>
 
                     <div>
-                      <p className="text-gray-500">Payment</p>
-                      <p className="font-bold capitalize text-gray-950">
+                      <p className="text-slate-500">Payment</p>
+
+                      <p className="font-bold capitalize text-slate-950">
                         {String(receipt.payment_method || "-").replace(
                           "_",
                           " ",
@@ -713,20 +782,21 @@ function PosPage() {
                     {(receipt.items || []).map((item, index) => (
                       <div
                         key={`${item.sku}-${index}`}
-                        className="rounded-xl border border-gray-200 p-4"
+                        className="rounded-2xl border border-slate-200 p-4"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="font-bold text-gray-950">
+                            <p className="font-bold text-slate-950">
                               {item.name}
                             </p>
-                            <p className="mt-1 text-sm text-gray-500">
-                              {item.sku} x {item.quantity} @{" "}
+
+                            <p className="mt-1 text-sm text-slate-500">
+                              {item.sku} × {item.quantity} @{" "}
                               {formatMoney(item.selling_price)}
                             </p>
                           </div>
 
-                          <p className="font-bold text-gray-950">
+                          <p className="font-bold text-slate-950">
                             {formatMoney(item.line_total)}
                           </p>
                         </div>
@@ -734,9 +804,10 @@ function PosPage() {
                     ))}
                   </div>
 
-                  <div className="rounded-xl bg-gray-950 p-5 text-white">
+                  <div className="rounded-2xl bg-slate-950 p-5 text-white">
                     <div className="flex items-center justify-between">
                       <span className="text-lg font-bold">Total Paid</span>
+
                       <span className="text-2xl font-bold">
                         {formatMoney(receipt.total_amount)}
                       </span>
@@ -745,9 +816,9 @@ function PosPage() {
                 </div>
               </div>
             )}
-          </div>
+          </aside>
         )}
-      </div>
+      </section>
     </div>
   );
 }
