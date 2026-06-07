@@ -69,6 +69,8 @@ NexERP uses a modular monolith architecture.
 - Admin and member roles
 - Role-based API access
 
+<img width="1914" height="1032" alt="Login Page" src="https://github.com/user-attachments/assets/da698174-409a-4438-96de-0d7b9f79f232" />
+
 ### Product
 
 - Product CRUD
@@ -78,6 +80,8 @@ NexERP uses a modular monolith architecture.
 - Soft delete support
 - Initial inventory setup
 
+<img width="1897" height="1028" alt="Product" src="https://github.com/user-attachments/assets/5872082b-97f5-4ae1-8558-7d6de4b16e4f" />
+
 ### Inventory
 
 - Stock list
@@ -86,6 +90,8 @@ NexERP uses a modular monolith architecture.
 - Manual stock adjustment
 - Stock value calculation
 - Search, filters, sorting, and pagination
+
+<img width="1897" height="1028" alt="Inventory" src="https://github.com/user-attachments/assets/db9b819a-c508-40f7-9cc2-6e3e9c2b2ee5" />
 
 ### Purchase
 
@@ -97,6 +103,8 @@ NexERP uses a modular monolith architecture.
 - Automatic stock increase after purchase confirmation
 - Weighted average purchase cost update
 
+<img width="1898" height="1028" alt="Purchases" src="https://github.com/user-attachments/assets/c90f940a-2bf2-42c4-91c4-131ce1caca7e" />
+
 ### Sales
 
 - Customer management
@@ -107,6 +115,8 @@ NexERP uses a modular monolith architecture.
 - Automatic stock decrease after sale confirmation
 - Insufficient stock validation
 
+<img width="1903" height="1032" alt="Sales" src="https://github.com/user-attachments/assets/ceaeb141-61b7-4fd0-8a14-1c2718965328" />
+
 ### POS
 
 - Product search for checkout
@@ -116,6 +126,8 @@ NexERP uses a modular monolith architecture.
 - Instant confirmed sale
 - Automatic stock decrease
 - Receipt-style response
+
+<img width="1902" height="1028" alt="POS 1" src="https://github.com/user-attachments/assets/ff45577a-487d-4613-876f-6bf93c81e5ca" />
 
 ### Dashboard
 
@@ -129,6 +141,10 @@ NexERP uses a modular monolith architecture.
 - Recent sales
 - Low stock preview
 
+<img width="1891" height="913" alt="Dashboard 1" src="https://github.com/user-attachments/assets/f9d7fdc7-9062-4cdb-bd8f-49a2d7135116" />
+
+<img width="1888" height="1035" alt="Dashboard 2" src="https://github.com/user-attachments/assets/53c130e9-72de-42eb-b3e8-30dccaaa623c" />
+
 ### Reports
 
 - Inventory report
@@ -138,6 +154,10 @@ NexERP uses a modular monolith architecture.
 - Date range filters
 - Sales channel filter
 - PDF export
+
+<img width="1897" height="1033" alt="Reports" src="https://github.com/user-attachments/assets/e3a1dc87-8af0-42bf-bbb3-688adc7ebdb5" />
+
+<img width="1892" height="1035" alt="Reports 2" src="https://github.com/user-attachments/assets/d0377b5c-bc03-48d0-98ee-0add5fcf5f7d" />
 
 ---
 
