@@ -51,6 +51,8 @@ NexERP uses a modular monolith architecture.
 - Auth
 - Product
 - Inventory
+- Suppliers
+- Customers
 - Purchase
 - Sales
 - POS
@@ -92,6 +94,24 @@ NexERP uses a modular monolith architecture.
 - Search, filters, sorting, and pagination
 
 <img width="1897" height="1028" alt="Inventory" src="https://github.com/user-attachments/assets/db9b819a-c508-40f7-9cc2-6e3e9c2b2ee5" />
+
+### Suppliers
+
+- Supplier CRUD
+- Search, filters, pagination
+- Linked to purchases
+- Soft delete support
+
+<img width="1894" height="1029" alt="Suppliers" src="https://github.com/user-attachments/assets/2cf33598-c75c-4109-8d1d-04f7f76a66bb" />
+
+### Customers
+
+- Customer CRUD
+- Search, filters, pagination
+- Linked to sales
+- Soft delete support
+
+<img width="1903" height="1028" alt="Customers" src="https://github.com/user-attachments/assets/01417a48-c094-4190-bb78-05baa1773941" />
 
 ### Purchase
 
