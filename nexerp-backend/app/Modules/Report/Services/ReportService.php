@@ -7,7 +7,6 @@ use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\Sale;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Collection;
 
 class ReportService
 {
@@ -47,9 +46,9 @@ class ReportService
         ];
     }
 
-    public function getInventoryReport(array $filters = []): array
+    public function getInventoryReport(array $filters = [], ?int $limit = null): array
     {
-        $inventories = Inventory::query()
+        $query = Inventory::query()
             ->with('product:id,sku,name')
             ->whereHas('product')
             ->when(
@@ -59,9 +58,14 @@ class ReportService
             ->when(
                 ! empty($filters['date_to']),
                 fn (Builder $query) => $query->whereDate('purchase_date', '<=', $filters['date_to'])
-            )
-            ->orderBy('id')
-            ->get();
+            );
+
+        $summary = $this->inventorySummaryFromQuery(clone $query);
+
+        $inventories = $this->applyLimit(
+            $query->orderBy('id'),
+            $limit
+        )->get();
 
         $items = $inventories->map(function (Inventory $inventory): array {
             $totalValue = (float) $inventory->quantity * (float) $inventory->purchase_price;
@@ -79,15 +83,16 @@ class ReportService
         });
 
         return [
-            'summary' => $this->inventorySummary($inventories),
+            'summary' => $summary,
             'filters' => $this->reportFilters($filters),
             'items' => $items->values()->toArray(),
+            'meta' => $this->reportMeta($limit, $summary['total_products']),
         ];
     }
 
-    public function getLowStockReport(array $filters = []): array
+    public function getLowStockReport(array $filters = [], ?int $limit = null): array
     {
-        $inventories = Inventory::query()
+        $query = Inventory::query()
             ->with('product:id,sku,name')
             ->whereHas('product')
             ->whereColumn('quantity', '<=', 'low_stock_threshold')
@@ -98,10 +103,14 @@ class ReportService
             ->when(
                 ! empty($filters['date_to']),
                 fn (Builder $query) => $query->whereDate('purchase_date', '<=', $filters['date_to'])
-            )
-            ->orderBy('quantity')
-            ->orderBy('id')
-            ->get();
+            );
+
+        $summary = $this->lowStockSummaryFromQuery(clone $query);
+
+        $inventories = $this->applyLimit(
+            $query->orderBy('quantity')->orderBy('id'),
+            $limit
+        )->get();
 
         $items = $inventories->map(function (Inventory $inventory): array {
             $totalValue = (float) $inventory->quantity * (float) $inventory->purchase_price;
@@ -119,15 +128,16 @@ class ReportService
         });
 
         return [
-            'summary' => $this->lowStockSummary($inventories),
+            'summary' => $summary,
             'filters' => $this->reportFilters($filters),
             'items' => $items->values()->toArray(),
+            'meta' => $this->reportMeta($limit, $summary['low_stock_count']),
         ];
     }
 
-    public function getPurchaseReport(array $filters = []): array
+    public function getPurchaseReport(array $filters = [], ?int $limit = null): array
     {
-        $purchases = Purchase::query()
+        $query = Purchase::query()
             ->with('supplier:id,name')
             ->withCount('items')
             ->where('status', 'confirmed')
@@ -138,10 +148,17 @@ class ReportService
             ->when(
                 ! empty($filters['date_to']),
                 fn (Builder $query) => $query->whereDate('purchase_date', '<=', $filters['date_to'])
-            )
-            ->latest('purchase_date')
-            ->latest('id')
-            ->get();
+            );
+
+        $summary = [
+            'total_purchases' => (clone $query)->count(),
+            'total_purchase_amount' => $this->formatMoney((clone $query)->sum('total_amount')),
+        ];
+
+        $purchases = $this->applyLimit(
+            $query->latest('purchase_date')->latest('id'),
+            $limit
+        )->get();
 
         $items = $purchases->map(function (Purchase $purchase): array {
             return [
@@ -155,18 +172,16 @@ class ReportService
         });
 
         return [
-            'summary' => [
-                'total_purchases' => $purchases->count(),
-                'total_purchase_amount' => $this->formatMoney($purchases->sum('total_amount')),
-            ],
+            'summary' => $summary,
             'filters' => $this->reportFilters($filters),
             'items' => $items->values()->toArray(),
+            'meta' => $this->reportMeta($limit, $summary['total_purchases']),
         ];
     }
 
-    public function getSalesReport(array $filters = []): array
+    public function getSalesReport(array $filters = [], ?int $limit = null): array
     {
-        $sales = Sale::query()
+        $query = Sale::query()
             ->with('customer:id,name')
             ->withCount('items')
             ->where('status', 'confirmed')
@@ -181,10 +196,17 @@ class ReportService
             ->when(
                 ! empty($filters['sale_channel']) && $filters['sale_channel'] !== 'all',
                 fn (Builder $query) => $query->where('sale_channel', $filters['sale_channel'])
-            )
-            ->latest('sale_date')
-            ->latest('id')
-            ->get();
+            );
+
+        $summary = [
+            'total_sales' => (clone $query)->count(),
+            'total_sales_amount' => $this->formatMoney((clone $query)->sum('total_amount')),
+        ];
+
+        $sales = $this->applyLimit(
+            $query->latest('sale_date')->latest('id'),
+            $limit
+        )->get();
 
         $items = $sales->map(function (Sale $sale): array {
             return [
@@ -200,47 +222,72 @@ class ReportService
         });
 
         return [
-            'summary' => [
-                'total_sales' => $sales->count(),
-                'total_sales_amount' => $this->formatMoney($sales->sum('total_amount')),
-            ],
+            'summary' => $summary,
             'filters' => [
                 'date_from' => $filters['date_from'] ?? null,
                 'date_to' => $filters['date_to'] ?? null,
                 'sale_channel' => $filters['sale_channel'] ?? 'all',
             ],
             'items' => $items->values()->toArray(),
+            'meta' => $this->reportMeta($limit, $summary['total_sales']),
         ];
     }
 
-    private function inventorySummary(Collection $inventories): array
+    private function applyLimit(Builder $query, ?int $limit): Builder
     {
+        if ($limit !== null && $limit > 0) {
+            $query->limit($limit);
+        }
+
+        return $query;
+    }
+
+    private function inventorySummaryFromQuery(Builder $query): array
+    {
+        $totalProducts = (clone $query)->count();
+        $totalQuantity = (int) (clone $query)->sum('quantity');
+
+        $totalInventoryValue = (clone $query)
+            ->selectRaw('COALESCE(SUM(quantity * purchase_price), 0) as total')
+            ->value('total');
+
+        $lowStockCount = (clone $query)
+            ->whereColumn('quantity', '<=', 'low_stock_threshold')
+            ->count();
+
         return [
-            'total_products' => $inventories->count(),
-            'total_quantity' => (int) $inventories->sum('quantity'),
-            'total_inventory_value' => $this->formatMoney(
-                $inventories->sum(
-                    fn (Inventory $inventory): float => (float) $inventory->quantity * (float) $inventory->purchase_price
-                )
-            ),
-            'low_stock_count' => $inventories
-                ->filter(fn (Inventory $inventory): bool => $inventory->quantity <= $inventory->low_stock_threshold)
-                ->count(),
+            'total_products' => $totalProducts,
+            'total_quantity' => $totalQuantity,
+            'total_inventory_value' => $this->formatMoney($totalInventoryValue),
+            'low_stock_count' => $lowStockCount,
         ];
     }
 
-    private function lowStockSummary(Collection $inventories): array
+    private function lowStockSummaryFromQuery(Builder $query): array
+    {
+        $lowStockCount = (clone $query)->count();
+
+        $outOfStockCount = (clone $query)
+            ->where('quantity', '<=', 0)
+            ->count();
+
+        $lowStockInventoryValue = (clone $query)
+            ->selectRaw('COALESCE(SUM(quantity * purchase_price), 0) as total')
+            ->value('total');
+
+        return [
+            'low_stock_count' => $lowStockCount,
+            'out_of_stock_count' => $outOfStockCount,
+            'low_stock_inventory_value' => $this->formatMoney($lowStockInventoryValue),
+        ];
+    }
+
+    private function reportMeta(?int $limit, int $total): array
     {
         return [
-            'low_stock_count' => $inventories->count(),
-            'out_of_stock_count' => $inventories
-                ->filter(fn (Inventory $inventory): bool => $inventory->quantity <= 0)
-                ->count(),
-            'low_stock_inventory_value' => $this->formatMoney(
-                $inventories->sum(
-                    fn (Inventory $inventory): float => (float) $inventory->quantity * (float) $inventory->purchase_price
-                )
-            ),
+            'preview_limit' => $limit,
+            'total_items' => $total,
+            'is_preview' => $limit !== null,
         ];
     }
 

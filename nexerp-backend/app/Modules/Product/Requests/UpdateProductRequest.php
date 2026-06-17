@@ -20,6 +20,8 @@ class UpdateProductRequest extends FormRequest
         $productId = $this->route('product');
 
         return [
+            'category_id' => ['required', 'integer', 'exists:categories,id'],
+
             'sku' => [
                 'required',
                 'string',

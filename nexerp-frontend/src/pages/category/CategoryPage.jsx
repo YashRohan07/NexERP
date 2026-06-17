@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
-import { getAllCategories } from "../../api/categoryApi";
 import {
-  createProduct,
-  deleteProduct,
-  getProducts,
-  updateProduct,
-} from "../../api/productApi";
+  createCategory,
+  deleteCategory,
+  getCategories,
+  updateCategory,
+} from "../../api/categoryApi";
 import Button from "../../components/common/Button";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import Input from "../../components/common/Input";
@@ -15,15 +14,7 @@ import Pagination from "../../components/common/Pagination";
 import { getRole } from "../../utils/auth";
 
 const emptyForm = {
-  category_id: "",
-  sku: "",
   name: "",
-  size: "",
-  color: "",
-  quantity: "",
-  purchase_price: "",
-  purchase_date: "",
-  low_stock_threshold: "",
 };
 
 function getErrorMessage(error) {
@@ -40,19 +31,10 @@ function getErrorMessage(error) {
   );
 }
 
-function formatMoney(value) {
-  return Number(value || 0).toLocaleString("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
-}
-
-function ProductPage() {
+function CategoryPage() {
   const isAdmin = getRole() === "admin";
 
-  const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-
   const [pagination, setPagination] = useState({
     current_page: 1,
     per_page: 10,
@@ -62,13 +44,11 @@ function ProductPage() {
 
   const [filters, setFilters] = useState({
     search: "",
-    size: "",
-    color: "",
     per_page: 10,
   });
 
   const [form, setForm] = useState(emptyForm);
-  const [editingProduct, setEditingProduct] = useState(null);
+  const [editingCategory, setEditingCategory] = useState(null);
   const [showFormModal, setShowFormModal] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -80,8 +60,7 @@ function ProductPage() {
   const [formError, setFormError] = useState("");
 
   useEffect(() => {
-    fetchProducts(1);
-    fetchCategories();
+    fetchCategories(1);
   }, []);
 
   function buildParams(page = 1) {
@@ -91,21 +70,19 @@ function ProductPage() {
     };
 
     if (filters.search) params.search = filters.search;
-    if (filters.size) params.size = filters.size;
-    if (filters.color) params.color = filters.color;
 
     return params;
   }
 
-  async function fetchProducts(page = 1) {
+  async function fetchCategories(page = 1) {
     setLoading(true);
     setError("");
 
     try {
-      const response = await getProducts(buildParams(page));
+      const response = await getCategories(buildParams(page));
       const data = response.data?.data || {};
 
-      setProducts(data.products || []);
+      setCategories(data.categories || []);
       setPagination(
         data.pagination || {
           current_page: 1,
@@ -121,17 +98,6 @@ function ProductPage() {
     }
   }
 
-  async function fetchCategories() {
-    try {
-      const response = await getAllCategories();
-      const data = response.data?.data || {};
-
-      setCategories(data.categories || []);
-    } catch (err) {
-      setError(getErrorMessage(err));
-    }
-  }
-
   function handleFilterChange(event) {
     const { name, value } = event.target;
 
@@ -143,19 +109,17 @@ function ProductPage() {
 
   function handleSearchSubmit(event) {
     event.preventDefault();
-    fetchProducts(1);
+    fetchCategories(1);
   }
 
   function resetFilters() {
     setFilters({
       search: "",
-      size: "",
-      color: "",
       per_page: 10,
     });
 
     setTimeout(() => {
-      fetchProducts(1);
+      fetchCategories(1);
     }, 0);
   }
 
@@ -169,32 +133,17 @@ function ProductPage() {
   }
 
   function openCreateModal() {
-    if (categories.length === 0) {
-      setError("Please create a category before adding products.");
-      return;
-    }
-
-    setEditingProduct(null);
+    setEditingCategory(null);
     setForm(emptyForm);
     setFormError("");
     setShowFormModal(true);
   }
 
-  function openEditModal(product) {
-    setEditingProduct(product);
-
+  function openEditModal(category) {
+    setEditingCategory(category);
     setForm({
-      category_id: product.category_id || product.category?.id || "",
-      sku: product.sku || "",
-      name: product.name || "",
-      size: product.size || "",
-      color: product.color || "",
-      quantity: product.inventory?.quantity ?? product.stock ?? "",
-      purchase_price: product.inventory?.purchase_price || "",
-      purchase_date: product.inventory?.purchase_date || "",
-      low_stock_threshold: product.inventory?.low_stock_threshold ?? "",
+      name: category.name || "",
     });
-
     setFormError("");
     setShowFormModal(true);
   }
@@ -206,28 +155,20 @@ function ProductPage() {
     setFormError("");
 
     const payload = {
-      category_id: Number(form.category_id),
-      sku: form.sku,
-      name: form.name,
-      size: form.size || null,
-      color: form.color || null,
-      quantity: Number(form.quantity),
-      purchase_price: Number(form.purchase_price),
-      purchase_date: form.purchase_date || null,
-      low_stock_threshold: Number(form.low_stock_threshold),
+      name: form.name.trim(),
     };
 
     try {
-      if (editingProduct) {
-        await updateProduct(editingProduct.id, payload);
+      if (editingCategory) {
+        await updateCategory(editingCategory.id, payload);
       } else {
-        await createProduct(payload);
+        await createCategory(payload);
       }
 
       setShowFormModal(false);
-      setEditingProduct(null);
+      setEditingCategory(null);
       setForm(emptyForm);
-      fetchProducts(pagination.current_page);
+      fetchCategories(pagination.current_page);
     } catch (err) {
       setFormError(getErrorMessage(err));
     } finally {
@@ -235,9 +176,9 @@ function ProductPage() {
     }
   }
 
-  function openDeleteDialog(product) {
+  function openDeleteDialog(category) {
     setError("");
-    setDeleteTarget(product);
+    setDeleteTarget(category);
   }
 
   function closeDeleteDialog() {
@@ -252,15 +193,15 @@ function ProductPage() {
     setError("");
 
     try {
-      await deleteProduct(deleteTarget.id);
+      await deleteCategory(deleteTarget.id);
 
       const nextPage =
-        products.length === 1 && pagination.current_page > 1
+        categories.length === 1 && pagination.current_page > 1
           ? pagination.current_page - 1
           : pagination.current_page;
 
       setDeleteTarget(null);
-      fetchProducts(nextPage);
+      fetchCategories(nextPage);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -274,71 +215,47 @@ function ProductPage() {
         <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-blue-600">
-              Product Management
+              Category Management
             </p>
 
             <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
-              Products
+              Categories
             </h1>
 
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-              Manage product records, product attributes, and initial inventory
-              setup.
+              Create and manage product categories before adding products.
             </p>
           </div>
 
           {isAdmin && (
             <Button
               onClick={openCreateModal}
-              disabled={categories.length === 0}
               className="inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-bold shadow-md shadow-blue-100 sm:w-auto"
             >
-              + Add Product
+              + Add Category
             </Button>
           )}
         </div>
-
-        {categories.length === 0 && (
-          <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
-            Please create at least one category before adding products.
-          </p>
-        )}
       </section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/70">
         <div className="mb-4">
           <h2 className="text-lg font-bold text-slate-950">Filters</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Search and narrow product records by SKU, name, size, or color.
+            Search and narrow category records by name.
           </p>
         </div>
 
         <form
           onSubmit={handleSearchSubmit}
-          className="grid gap-4 lg:grid-cols-[1.2fr_1fr_1fr_0.8fr_auto]"
+          className="grid gap-4 lg:grid-cols-[1.5fr_0.7fr_auto]"
         >
           <Input
             label="Search"
             name="search"
             value={filters.search}
             onChange={handleFilterChange}
-            placeholder="Search by SKU or product name"
-          />
-
-          <Input
-            label="Size"
-            name="size"
-            value={filters.size}
-            onChange={handleFilterChange}
-            placeholder="XL, 36..."
-          />
-
-          <Input
-            label="Color"
-            name="color"
-            value={filters.color}
-            onChange={handleFilterChange}
-            placeholder="Black, White..."
+            placeholder="Search by category name"
           />
 
           <Input
@@ -377,19 +294,19 @@ function ProductPage() {
       )}
 
       {loading ? (
-        <Loader text="Loading products..." />
+        <Loader text="Loading categories..." />
       ) : (
         <>
           <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm shadow-slate-200/70">
             <div className="flex flex-col gap-2 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-lg font-bold text-slate-950">
-                  Product List
+                  Category List
                 </h2>
 
                 <p className="mt-1 text-sm text-slate-500">
-                  {pagination.total} product{pagination.total === 1 ? "" : "s"}{" "}
-                  found.
+                  {pagination.total} categor
+                  {pagination.total === 1 ? "y" : "ies"} found.
                 </p>
               </div>
 
@@ -398,31 +315,24 @@ function ProductPage() {
               </span>
             </div>
 
-            {products.length === 0 ? (
+            {categories.length === 0 ? (
               <div className="px-5 py-7">
                 <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-6 text-center">
                   <p className="text-sm font-semibold text-slate-700">
-                    No products available
+                    No categories available
                   </p>
 
                   <p className="mt-1 text-xs text-slate-500">
-                    Create your first product or adjust the current filters.
+                    Create your first category before adding products.
                   </p>
                 </div>
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[1050px] text-left text-sm">
+                <table className="w-full min-w-[520px] text-left text-sm">
                   <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                     <tr>
-                      <th className="px-5 py-3">SKU</th>
-                      <th className="px-5 py-3">Name</th>
-                      <th className="px-5 py-3">Category</th>
-                      <th className="px-5 py-3">Size</th>
-                      <th className="px-5 py-3">Color</th>
-                      <th className="px-5 py-3 text-right">Stock</th>
-                      <th className="px-5 py-3 text-right">Unit Cost</th>
-                      <th className="px-5 py-3">Purchase Date</th>
+                      <th className="px-5 py-3">Category Name</th>
                       {isAdmin && (
                         <th className="px-5 py-3 text-right">Actions</th>
                       )}
@@ -430,41 +340,13 @@ function ProductPage() {
                   </thead>
 
                   <tbody className="divide-y divide-slate-100">
-                    {products.map((product) => (
+                    {categories.map((category) => (
                       <tr
-                        key={product.id}
+                        key={category.id}
                         className="transition hover:bg-slate-50"
                       >
-                        <td className="px-5 py-4 font-semibold text-slate-950">
-                          {product.sku}
-                        </td>
-
                         <td className="px-5 py-4 font-medium text-slate-700">
-                          {product.name}
-                        </td>
-
-                        <td className="px-5 py-4 text-slate-700">
-                          {product.category?.name || "-"}
-                        </td>
-
-                        <td className="px-5 py-4 text-slate-700">
-                          {product.size || "-"}
-                        </td>
-
-                        <td className="px-5 py-4 text-slate-700">
-                          {product.color || "-"}
-                        </td>
-
-                        <td className="px-5 py-4 text-right font-semibold text-slate-800">
-                          {product.stock ?? product.inventory?.quantity ?? 0}
-                        </td>
-
-                        <td className="px-5 py-4 text-right font-medium text-slate-700">
-                          ৳{formatMoney(product.inventory?.purchase_price)}
-                        </td>
-
-                        <td className="px-5 py-4 text-slate-700">
-                          {product.inventory?.purchase_date || "-"}
+                          {category.name}
                         </td>
 
                         {isAdmin && (
@@ -473,7 +355,7 @@ function ProductPage() {
                               <Button
                                 variant="outline"
                                 className="rounded-xl font-bold"
-                                onClick={() => openEditModal(product)}
+                                onClick={() => openEditModal(category)}
                               >
                                 Edit
                               </Button>
@@ -481,7 +363,7 @@ function ProductPage() {
                               <Button
                                 variant="danger"
                                 className="rounded-xl font-bold"
-                                onClick={() => openDeleteDialog(product)}
+                                onClick={() => openDeleteDialog(category)}
                               >
                                 Delete
                               </Button>
@@ -497,15 +379,19 @@ function ProductPage() {
           </section>
 
           {pagination.total > 0 && (
-            <Pagination pagination={pagination} onPageChange={fetchProducts} />
+            <Pagination
+              pagination={pagination}
+              onPageChange={fetchCategories}
+            />
           )}
         </>
       )}
 
       {showFormModal && (
         <Modal
-          title={editingProduct ? "Edit Product" : "Add Product"}
+          title={editingCategory ? "Edit Category" : "Add Category"}
           onClose={() => setShowFormModal(false)}
+          width="max-w-lg"
         >
           {formError && (
             <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
@@ -513,102 +399,17 @@ function ProductPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
-            <div className="md:col-span-2">
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                Category
-              </label>
-
-              <select
-                name="category_id"
-                value={form.category_id}
-                onChange={handleFormChange}
-                required
-                className="h-[42px] w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              >
-                <option value="">Select category</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
+          <form onSubmit={handleSubmit} className="space-y-4">
             <Input
-              label="SKU"
-              name="sku"
-              value={form.sku}
-              onChange={handleFormChange}
-              required
-            />
-
-            <Input
-              label="Name"
+              label="Category Name"
               name="name"
               value={form.name}
               onChange={handleFormChange}
+              placeholder="Example: Shirt"
               required
             />
 
-            <Input
-              label="Size"
-              name="size"
-              value={form.size}
-              onChange={handleFormChange}
-            />
-
-            <Input
-              label="Color"
-              name="color"
-              value={form.color}
-              onChange={handleFormChange}
-            />
-
-            {!editingProduct && (
-              <>
-                <Input
-                  label="Quantity"
-                  type="number"
-                  min="0"
-                  name="quantity"
-                  value={form.quantity}
-                  onChange={handleFormChange}
-                  required
-                />
-
-                <Input
-                  label="Purchase Price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  name="purchase_price"
-                  value={form.purchase_price}
-                  onChange={handleFormChange}
-                  required
-                />
-
-                <Input
-                  label="Purchase Date"
-                  type="date"
-                  name="purchase_date"
-                  value={form.purchase_date}
-                  onChange={handleFormChange}
-                />
-              </>
-            )}
-
-            <Input
-              label="Low Stock Threshold"
-              type="number"
-              min="0"
-              name="low_stock_threshold"
-              value={form.low_stock_threshold}
-              onChange={handleFormChange}
-              required
-            />
-
-            <div className="flex justify-end gap-3 md:col-span-2">
+            <div className="flex justify-end gap-3">
               <Button
                 type="button"
                 variant="outline"
@@ -625,9 +426,9 @@ function ProductPage() {
               >
                 {saving
                   ? "Saving..."
-                  : editingProduct
-                    ? "Update Product"
-                    : "Create Product"}
+                  : editingCategory
+                    ? "Update Category"
+                    : "Create Category"}
               </Button>
             </div>
           </form>
@@ -636,12 +437,12 @@ function ProductPage() {
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        title="Delete Product"
+        title="Delete Category"
         message={`Are you sure you want to delete "${
-          deleteTarget?.name || "this product"
-        }"? This action cannot be undone.`}
-        confirmText="Delete Product"
-        cancelText="Keep Product"
+          deleteTarget?.name || "this category"
+        }"? If this category is already used by products, it cannot be deleted.`}
+        confirmText="Delete Category"
+        cancelText="Keep Category"
         variant="danger"
         loading={deleteLoading}
         onConfirm={handleConfirmDelete}
@@ -651,4 +452,4 @@ function ProductPage() {
   );
 }
 
-export default ProductPage;
+export default CategoryPage;

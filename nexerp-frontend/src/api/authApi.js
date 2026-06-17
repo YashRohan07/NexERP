@@ -1,6 +1,13 @@
+import axios from "axios";
 import api from "./axios";
 
-export function login(payload) {
+const API_BASE_URL = "https://api.devexait.com";
+
+export async function login(payload) {
+  await axios.get(`${API_BASE_URL}/sanctum/csrf-cookie`, {
+    withCredentials: true,
+  });
+
   return api.post("/auth/login", payload);
 }
 

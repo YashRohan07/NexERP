@@ -2,7 +2,9 @@ import axios from "axios";
 import { getToken, logout } from "../utils/auth";
 
 const api = axios.create({
-  baseURL: "http://127.0.0.1:8000/api",
+  baseURL: "https://api.devexait.com/api",
+  withCredentials: true,
+  withXSRFToken: true,
   headers: {
     Accept: "application/json",
     "Content-Type": "application/json",

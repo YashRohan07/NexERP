@@ -12,6 +12,8 @@ use App\Support\ApiResponse;
 
 class ReportController extends Controller
 {
+    private const PREVIEW_LIMIT = 5;
+
     public function __construct(
         private readonly ReportService $reportService,
         private readonly PdfExportService $pdfExportService
@@ -30,7 +32,10 @@ class ReportController extends Controller
     {
         return ApiResponse::success(
             'Inventory report fetched successfully',
-            $this->reportService->getInventoryReport($request->validated())
+            $this->reportService->getInventoryReport(
+                $request->validated(),
+                self::PREVIEW_LIMIT
+            )
         );
     }
 
@@ -38,7 +43,10 @@ class ReportController extends Controller
     {
         return ApiResponse::success(
             'Low stock report fetched successfully',
-            $this->reportService->getLowStockReport($request->validated())
+            $this->reportService->getLowStockReport(
+                $request->validated(),
+                self::PREVIEW_LIMIT
+            )
         );
     }
 
@@ -46,7 +54,10 @@ class ReportController extends Controller
     {
         return ApiResponse::success(
             'Purchase report fetched successfully',
-            $this->reportService->getPurchaseReport($request->validated())
+            $this->reportService->getPurchaseReport(
+                $request->validated(),
+                self::PREVIEW_LIMIT
+            )
         );
     }
 
@@ -54,7 +65,10 @@ class ReportController extends Controller
     {
         return ApiResponse::success(
             'Sales report fetched successfully',
-            $this->reportService->getSalesReport($request->validated())
+            $this->reportService->getSalesReport(
+                $request->validated(),
+                self::PREVIEW_LIMIT
+            )
         );
     }
 

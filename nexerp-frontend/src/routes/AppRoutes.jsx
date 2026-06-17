@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import LoginPage from "../pages/auth/LoginPage";
+import CategoryPage from "../pages/category/CategoryPage";
 import DashboardPage from "../pages/dashboard/DashboardPage";
 import InventoryPage from "../pages/inventory/InventoryPage";
 import PosPage from "../pages/pos/PosPage";
@@ -28,6 +29,7 @@ function AppRoutes() {
       >
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/categories" element={<CategoryPage />} />
         <Route path="/products" element={<ProductPage />} />
         <Route path="/inventory" element={<InventoryPage />} />
         <Route path="/suppliers" element={<SupplierPage />} />

@@ -20,10 +20,13 @@ class ProductService
 
         return Product::query()
             /*
-             * Select only required inventory columns instead of loading all columns.
+             * Select only required category and inventory columns instead of loading all columns.
              * This keeps product list API lighter.
              */
-            ->with('inventory:id,product_id,quantity,purchase_price,purchase_date,low_stock_threshold')
+            ->with([
+                'category:id,name',
+                'inventory:id,product_id,quantity,purchase_price,purchase_date,low_stock_threshold',
+            ])
             ->when($filters['search'] ?? null, function (Builder $query, string $search): void {
                 $query->where(function (Builder $query) use ($search): void {
                     $query->where('sku', 'like', "%{$search}%")
@@ -44,6 +47,7 @@ class ProductService
     {
         return DB::transaction(function () use ($data): Product {
             $product = Product::create([
+                'category_id' => $data['category_id'],
                 'sku' => $data['sku'],
                 'name' => $data['name'],
                 'size' => $data['size'] ?? null,
@@ -63,14 +67,19 @@ class ProductService
 
             AppCache::clearDashboard();
 
-            return $product->load('inventory');
+            return $product->load([
+                'category:id,name',
+                'inventory:id,product_id,quantity,purchase_price,purchase_date,low_stock_threshold',
+            ]);
         });
     }
 
     public function getProduct(int $id): Product
     {
-        return Product::with('inventory:id,product_id,quantity,purchase_price,purchase_date,low_stock_threshold')
-            ->findOrFail($id);
+        return Product::with([
+            'category:id,name',
+            'inventory:id,product_id,quantity,purchase_price,purchase_date,low_stock_threshold',
+        ])->findOrFail($id);
     }
 
     public function updateProduct(int $id, array $data): Product
@@ -79,6 +88,7 @@ class ProductService
             $product = Product::with('inventory')->findOrFail($id);
 
             $product->update([
+                'category_id' => $data['category_id'],
                 'sku' => $data['sku'],
                 'name' => $data['name'],
                 'size' => $data['size'] ?? null,
@@ -105,7 +115,10 @@ class ProductService
 
             AppCache::clearDashboard();
 
-            return $product->load('inventory');
+            return $product->load([
+                'category:id,name',
+                'inventory:id,product_id,quantity,purchase_price,purchase_date,low_stock_threshold',
+            ]);
         });
     }
 
@@ -126,6 +139,11 @@ class ProductService
     {
         return [
             'id' => $product->id,
+            'category_id' => $product->category_id,
+            'category' => $product->category ? [
+                'id' => $product->category->id,
+                'name' => $product->category->name,
+            ] : null,
             'sku' => $product->sku,
             'name' => $product->name,
             'size' => $product->size,
